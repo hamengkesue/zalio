@@ -83,10 +83,27 @@ Tiru modul `ping`:
 6. daftarkan satu baris di `cmd/api/main.go`: `namamodul.Register(api, pool)`
 7. **composable + page** di frontend
 
-## API endpoints (Fase 0)
+## API endpoints
 
 ```
+# Fase 0
 GET    /api/v1/health
 GET    /api/v1/ping
 POST   /api/v1/ping
+
+# Fase 1 — Auth & Users
+POST   /api/v1/auth/login              # publik → { token, user }
+GET    /api/v1/auth/me                 # butuh login
+GET    /api/v1/users                   # admin saja
+POST   /api/v1/users                   # admin saja
+PATCH  /api/v1/users/:id/toggle-active # admin saja
+```
+
+## Login pertama kali
+
+Backend membuat admin default otomatis saat pertama jalan:
+
+```
+email    : admin@zalio.local
+password : admin123   ← GANTI sebelum dipakai sungguhan
 ```

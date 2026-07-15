@@ -229,4 +229,20 @@ body {
 .data-table tbody tr:hover {
   background-color: var(--bg-row-hover);
 }
+.data-table .text-center { text-align: center; }
 .font-semibold { font-weight: 600; }
+
+/* ── Badges ── */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+.badge-success { background-color: var(--success-light); color: var(--success); }
+.badge-danger  { background-color: var(--danger-light);  color: var(--danger); }
+.badge-accent  { background-color: var(--accent-light);  color: var(--accent); }
+.badge-muted   { background-color: var(--bg-muted);      color: var(--text-muted); }

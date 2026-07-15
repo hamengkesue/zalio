@@ -1,5 +1,8 @@
 <script setup lang="ts">
   const colorMode = useColorMode()
+  const { user, fetchMe, logout } = useAuth()
+
+  onMounted(fetchMe)
 
   function toggleTheme() {
     colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'
@@ -14,13 +17,22 @@
         <span class="brand-name">Zalio ERP</span>
       </NuxtLink>
 
-      <div class="flex items-center gap-1">
+      <div class="flex items-center gap-2">
         <button class="icon-btn" title="Toggle theme" @click="toggleTheme">
           <UIcon :name="colorMode.value === 'dark' ? 'i-lucide-sun' : 'i-lucide-moon'" class="text-[18px]" />
         </button>
-        <div class="topbar-avatar">
-          <UIcon name="i-lucide-user" class="text-[18px]" />
+        <div v-if="user" class="topbar-user">
+          <div class="topbar-avatar">
+            <UIcon name="i-lucide-user" class="text-[18px]" />
+          </div>
+          <div class="topbar-user-info">
+            <span class="topbar-user-name">{{ user.name }}</span>
+            <span class="topbar-user-role">{{ user.role }}</span>
+          </div>
         </div>
+        <button class="icon-btn" title="Keluar" @click="logout">
+          <UIcon name="i-lucide-log-out" class="text-[18px]" />
+        </button>
       </div>
     </header>
 
@@ -92,6 +104,12 @@
     color: var(--text-primary);
   }
 
+  .topbar-user {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 6px;
+  }
   .topbar-avatar {
     width: 38px;
     height: 38px;
@@ -101,8 +119,22 @@
     justify-content: center;
     background-color: var(--accent-light);
     color: var(--accent);
-    margin-left: 6px;
     flex-shrink: 0;
+  }
+  .topbar-user-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+  }
+  .topbar-user-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .topbar-user-role {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: capitalize;
   }
 
   .app-body {

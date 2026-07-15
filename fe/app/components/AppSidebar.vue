@@ -1,8 +1,9 @@
 <script setup lang="ts">
   const route = useRoute()
   const { collapsed, toggle } = useSidebar()
+  const { isAdmin } = useAuth()
 
-  const menuGroups = [
+  const menuGroups = computed(() => [
     {
       label: '',
       items: [
@@ -15,7 +16,16 @@
         { label: 'Ping (contoh slice)', icon: 'i-lucide-radio', to: '/ping' },
       ],
     },
-  ]
+    // Menu Administrasi hanya tampil untuk admin.
+    ...(isAdmin.value
+      ? [{
+          label: 'Administrasi',
+          items: [
+            { label: 'Users', icon: 'i-lucide-users', to: '/users' },
+          ],
+        }]
+      : []),
+  ])
 </script>
 
 <template>

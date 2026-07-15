@@ -17,6 +17,7 @@ type Config struct {
 	DBSSLMode  string
 	ServerPort string
 	CORSOrigin string
+	JWTSecret  string
 }
 
 // Load membaca .env (kalau ada) lalu environment, dengan nilai default aman.
@@ -32,6 +33,7 @@ func Load() *Config {
 		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
 		ServerPort: getEnv("SERVER_PORT", "8082"),
 		CORSOrigin: getEnv("CORS_ORIGIN", "*"),
+		JWTSecret:  getEnv("JWT_SECRET", "dev-secret-ganti-di-produksi"),
 	}
 }
 

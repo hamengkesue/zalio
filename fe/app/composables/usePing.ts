@@ -4,8 +4,7 @@ export interface Ping {
   created_at: string
 }
 
-// Alamat backend Go (Fase 0 memakai port 8082).
-export const API_BASE = 'http://localhost:8082'
+// API_BASE didefinisikan sekali di useApi.ts (auto-import Nuxt).
 
 const pings = ref<Ping[]>([])
 
