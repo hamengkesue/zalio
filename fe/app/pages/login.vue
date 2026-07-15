@@ -1,10 +1,11 @@
 <script setup lang="ts">
   definePageMeta({ layout: false })
-  useHead({ title: 'Zalio ERP — Masuk' })
+  useHead({ title: 'Zalio ERP — Sign in' })
 
   const { login } = useAuth()
-  const email = ref('admin@zalio.local')
+  const username = ref('')
   const password = ref('')
+  const showPassword = ref(false)
   const loading = ref(false)
   const error = ref('')
 
@@ -12,10 +13,10 @@
     error.value = ''
     loading.value = true
     try {
-      await login(email.value, password.value)
+      await login(username.value, password.value)
       await navigateTo('/')
     } catch (e: any) {
-      error.value = e?.data?.error || 'Gagal masuk. Periksa email & password.'
+      error.value = e?.data?.error || 'Sign in failed. Check your username and password.'
     } finally {
       loading.value = false
     }
@@ -23,88 +24,263 @@
 </script>
 
 <template>
-  <div class="login-wrap">
-    <form class="login-card" @submit.prevent="submit">
-      <img src="/logo.svg" class="login-logo" width="48" height="48" alt="Zalio ERP">
-      <h1 class="login-title">Zalio ERP</h1>
-      <p class="login-sub">Masuk ke back-office</p>
+  <div class="login-page">
+    <!-- ── Left: branding ── -->
+    <div class="login-brand">
+      <div class="brand-badge">
+        <img src="/logo.svg" width="52" height="52" alt="Zalio ERP">
+        <span class="brand-badge-name">Zalio ERP</span>
+      </div>
+      <h2 class="brand-tagline">Efficiency in Every Process</h2>
+      <p class="brand-subtagline">Connecting Data, Empowering Teams</p>
+      <div class="brand-dots">
+        <span class="dot" /><span class="dot active" /><span class="dot" />
+      </div>
+    </div>
 
-      <label class="login-label">Email</label>
-      <input v-model="email" type="email" class="text-input" placeholder="email@contoh.com" autocomplete="username">
+    <!-- ── Right: form ── -->
+    <div class="login-form-col">
+      <form class="login-card" @submit.prevent="submit">
+        <h1 class="login-title">Welcome back</h1>
+        <p class="login-sub">Sign into your Zalio Account</p>
 
-      <label class="login-label">Password</label>
-      <input v-model="password" type="password" class="text-input" placeholder="••••••••" autocomplete="current-password">
+        <label class="field-label">USERNAME</label>
+        <div class="input-group">
+          <UIcon name="i-lucide-user" class="input-icon" />
+          <input
+            v-model="username"
+            class="field-input"
+            placeholder="Enter your username"
+            autocomplete="username"
+          >
+        </div>
 
-      <p v-if="error" class="login-error">{{ error }}</p>
+        <label class="field-label">PASSWORD</label>
+        <div class="input-group">
+          <UIcon name="i-lucide-lock" class="input-icon" />
+          <input
+            v-model="password"
+            :type="showPassword ? 'text' : 'password'"
+            class="field-input"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+          >
+          <button
+            type="button"
+            class="input-eye"
+            :title="showPassword ? 'Hide password' : 'Show password'"
+            @click="showPassword = !showPassword"
+          >
+            <UIcon :name="showPassword ? 'i-lucide-eye' : 'i-lucide-eye-off'" />
+          </button>
+        </div>
 
-      <button class="btn-primary login-btn" :disabled="loading" type="submit">
-        {{ loading ? 'Memproses...' : 'Masuk' }}
-      </button>
+        <p v-if="error" class="login-error">{{ error }}</p>
 
-      <p class="login-hint">Demo: <strong>admin@zalio.local</strong> / <strong>admin123</strong></p>
-    </form>
+        <button class="signin-btn" :disabled="loading" type="submit">
+          {{ loading ? 'Signing in...' : 'Sign In' }}
+        </button>
+
+        <p class="login-footer">Zalio ERP — Driving Operational Excellence.</p>
+      </form>
+    </div>
   </div>
 </template>
 
 <style scoped>
-  .login-wrap {
-    height: 100vh;
+  .login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    color: #fff;
+    background-color: #1e478f;
+    background-image:
+      radial-gradient(1000px 600px at 78% 8%, rgba(90, 160, 255, 0.35), transparent 60%),
+      linear-gradient(135deg, #1c407f 0%, #2a5bab 55%, #214d95 100%);
+  }
+
+  /* ── Branding (left) ── */
+  .login-brand {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    text-align: center;
+  }
+  .brand-badge {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px 28px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    backdrop-filter: blur(6px);
+    margin-bottom: 30px;
+  }
+  .brand-badge-name {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .brand-tagline {
+    font-size: 26px;
+    font-weight: 700;
+  }
+  .brand-subtagline {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 6px;
+  }
+  .brand-dots {
+    display: flex;
+    gap: 8px;
+    margin-top: 26px;
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.25);
+    transition: all 0.2s ease;
+  }
+  .dot.active {
+    width: 22px;
+    background: #2f8bff;
+  }
+
+  /* ── Form (right) ── */
+  .login-form-col {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--bg-page);
-    padding: 20px;
+    padding: 40px;
   }
   .login-card {
     width: 100%;
-    max-width: 380px;
+    max-width: 420px;
     display: flex;
     flex-direction: column;
-    background-color: var(--bg-surface);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 32px;
-  }
-  .login-logo {
-    align-self: center;
+    background: #f6f7f9;
+    border-radius: 22px;
+    padding: 40px;
+    color: #13141b;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35);
   }
   .login-title {
-    text-align: center;
-    font-size: 22px;
+    font-size: 30px;
     font-weight: 800;
-    color: var(--text-primary);
-    margin-top: 12px;
+    color: #0f1830;
   }
   .login-sub {
-    text-align: center;
     font-size: 14px;
-    color: var(--text-secondary);
-    margin-bottom: 20px;
+    color: #64748b;
+    margin-top: 6px;
+    margin-bottom: 24px;
   }
-  .login-label {
-    font-size: 13px;
+  .field-label {
+    font-size: 12px;
     font-weight: 700;
-    color: var(--text-secondary);
-    margin-bottom: 6px;
-    margin-top: 12px;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    margin-top: 16px;
+    margin-bottom: 8px;
+  }
+  .input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .input-icon {
+    position: absolute;
+    left: 14px;
+    font-size: 18px;
+    color: #94a3b8;
+    pointer-events: none;
+  }
+  .field-input {
+    width: 100%;
+    padding: 13px 44px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    font-size: 14px;
+    color: #13141b;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .field-input:focus {
+    border-color: #0070f2;
+    box-shadow: 0 0 0 3px rgba(0, 112, 242, 0.12);
+  }
+  .input-eye {
+    position: absolute;
+    right: 12px;
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #94a3b8;
+    font-size: 18px;
+  }
+  .input-eye:hover {
+    color: #64748b;
+  }
+  .signin-btn {
+    margin-top: 26px;
+    padding: 14px;
+    border-radius: 12px;
+    background: #1a7fff;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .signin-btn:hover:not(:disabled) {
+    background: #0f6fef;
+  }
+  .signin-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
   }
   .login-error {
-    margin-top: 12px;
+    margin-top: 16px;
     padding: 10px 12px;
     border-radius: 8px;
-    background-color: var(--danger-light);
-    color: var(--danger);
+    background: #fee2e2;
+    color: #dc2626;
     font-size: 13px;
     font-weight: 600;
   }
-  .login-btn {
-    margin-top: 20px;
-    width: 100%;
-  }
-  .login-hint {
+  .login-footer {
     text-align: center;
+    margin-top: 24px;
     font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 16px;
+    color: #94a3b8;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 860px) {
+    .login-page {
+      flex-direction: column;
+    }
+    .login-brand {
+      padding: 40px 20px 8px;
+    }
+    .brand-badge {
+      margin-bottom: 16px;
+    }
+    .brand-tagline {
+      font-size: 20px;
+    }
+    .brand-dots {
+      margin-top: 14px;
+    }
   }
 </style>

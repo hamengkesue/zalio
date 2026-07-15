@@ -12,5 +12,20 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  minio:
+    image: minio/minio:latest
+    container_name: zalio-erp-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: zalio_erp_minio
+      MINIO_ROOT_PASSWORD: zalio_erp_minio_secret
+    ports:
+      - "9004:9000"   # S3 API
+      - "9005:9001"   # Web console
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
 volumes:
   pgdata:
+  minio_data:

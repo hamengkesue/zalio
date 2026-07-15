@@ -15,13 +15,13 @@ func NewRepo(pool *pgxpool.Pool) *Repo {
 }
 
 // Kolom aman (tanpa password_hash).
-const userCols = `id, name, email, role, is_active, created_at`
+const userCols = `id, name, username, email, role, is_active, created_at`
 
 func scanUser(row interface {
 	Scan(dest ...any) error
 }) (*User, error) {
 	var u User
-	if err := row.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &u.IsActive, &u.CreatedAt); err != nil {
+	if err := row.Scan(&u.ID, &u.Name, &u.Username, &u.Email, &u.Role, &u.IsActive, &u.CreatedAt); err != nil {
 		return nil, err
 	}
 	return &u, nil
@@ -49,11 +49,11 @@ func (r *Repo) GetByID(ctx context.Context, id int) (*User, error) {
 	return scanUser(r.pool.QueryRow(ctx, `SELECT `+userCols+` FROM tb_user WHERE id = $1`, id))
 }
 
-// GetCredentialsByEmail mengambil hash + status untuk proses login.
-func (r *Repo) GetCredentialsByEmail(ctx context.Context, email string) (*Credentials, error) {
+// GetCredentialsByUsername mengambil hash + status untuk proses login.
+func (r *Repo) GetCredentialsByUsername(ctx context.Context, username string) (*Credentials, error) {
 	var cr Credentials
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, password_hash, role, is_active FROM tb_user WHERE email = $1`, email).
+		`SELECT id, password_hash, role, is_active FROM tb_user WHERE username = $1`, username).
 		Scan(&cr.ID, &cr.PasswordHash, &cr.Role, &cr.IsActive)
 	if err != nil {
 		return nil, err
@@ -61,12 +61,12 @@ func (r *Repo) GetCredentialsByEmail(ctx context.Context, email string) (*Creden
 	return &cr, nil
 }
 
-func (r *Repo) Create(ctx context.Context, name, email, passwordHash, role string) (*User, error) {
+func (r *Repo) Create(ctx context.Context, name, username, email, passwordHash, role string) (*User, error) {
 	return scanUser(r.pool.QueryRow(ctx,
-		`INSERT INTO tb_user (name, email, password_hash, role)
-		 VALUES ($1, $2, $3, $4)
+		`INSERT INTO tb_user (name, username, email, password_hash, role)
+		 VALUES ($1, $2, $3, $4, $5)
 		 RETURNING `+userCols,
-		name, email, passwordHash, role))
+		name, username, email, passwordHash, role))
 }
 
 func (r *Repo) ToggleActive(ctx context.Context, id int, isActive bool) (*User, error) {

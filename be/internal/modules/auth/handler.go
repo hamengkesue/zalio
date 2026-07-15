@@ -22,7 +22,7 @@ type Handler struct {
 
 func (h *Handler) Login(c *gin.Context) {
 	var req struct {
-		Email    string `json:"email" binding:"required,email"`
+		Username string `json:"username" binding:"required"`
 		Password string `json:"password" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -30,18 +30,18 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	cr, err := h.repo.GetCredentialsByEmail(c.Request.Context(), req.Email)
+	cr, err := h.repo.GetCredentialsByUsername(c.Request.Context(), req.Username)
 	if err != nil {
-		// email tidak ditemukan — pesan disamakan agar tidak membocorkan info
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "email atau password salah"})
+		// username tidak ditemukan — pesan disamakan agar tidak membocorkan info
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid username or password"})
 		return
 	}
 	if !cr.IsActive {
-		c.JSON(http.StatusForbidden, gin.H{"error": "akun dinonaktifkan"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "account is disabled"})
 		return
 	}
 	if bcrypt.CompareHashAndPassword([]byte(cr.PasswordHash), []byte(req.Password)) != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "email atau password salah"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid username or password"})
 		return
 	}
 
@@ -80,6 +80,7 @@ func (h *Handler) ListUsers(c *gin.Context) {
 func (h *Handler) CreateUser(c *gin.Context) {
 	var req struct {
 		Name     string `json:"name" binding:"required"`
+		Username string `json:"username" binding:"required"`
 		Email    string `json:"email" binding:"required,email"`
 		Password string `json:"password" binding:"required,min=6"`
 		Role     string `json:"role"`
@@ -98,11 +99,11 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	u, err := h.repo.Create(c.Request.Context(), req.Name, req.Email, string(hash), req.Role)
+	u, err := h.repo.Create(c.Request.Context(), req.Name, req.Username, req.Email, string(hash), req.Role)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique_violation
-			c.JSON(http.StatusConflict, gin.H{"error": "email sudah terpakai"})
+			c.JSON(http.StatusConflict, gin.H{"error": "username or email already taken"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

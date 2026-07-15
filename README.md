@@ -9,13 +9,16 @@ Dibangun sebagai **monolith modular** yang siap dipecah jadi microservice.
 
 Peta jalan lengkap ada di [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
-| Service | URL / Port |
-|---|---|
-| PostgreSQL | `localhost:5435` |
-| Backend API | `localhost:8082` |
-| Frontend | `localhost:3005` |
+| Service | URL / Port | Kredensial |
+|---|---|---|
+| PostgreSQL | `localhost:5435` | `zalio_erp` / `zalio_erp_secret` (db: `zalio_erp`) |
+| MinIO API (S3) | `localhost:9004` | `zalio_erp_minio` / `zalio_erp_minio_secret` |
+| MinIO Console | `localhost:9005` | (sama seperti di atas) |
+| Backend API | `localhost:8082` | — |
+| Frontend | `localhost:3005` | admin@zalio.local / admin123 |
 
 > Port sengaja berbeda dari `fulka-ffc` supaya bisa jalan berdampingan.
+> Bucket MinIO default: **`zalio-erp`** (dibuat otomatis via `mc`, atau buat manual di console).
 
 ## 1. Nyalakan infrastruktur
 

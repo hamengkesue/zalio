@@ -1,6 +1,7 @@
 export interface AuthUser {
   id: number
   name: string
+  username: string
   email: string
   role: string
   is_active: boolean
@@ -20,10 +21,10 @@ export function useAuth() {
   const isAuthenticated = computed(() => !!token.value)
   const isAdmin = computed(() => user.value?.role === 'admin')
 
-  async function login(email: string, password: string) {
+  async function login(username: string, password: string) {
     const res = await $fetch<{ token: string; user: AuthUser }>(
       `${API_BASE}/api/v1/auth/login`,
-      { method: 'POST', body: { email, password } },
+      { method: 'POST', body: { username, password } },
     )
     token.value = res.token
     user.value = res.user
@@ -49,7 +50,7 @@ export function useAuth() {
   function logout() {
     token.value = null
     user.value = null
-    toast.add({ title: 'Keluar', description: 'Kamu sudah logout', color: 'info' })
+    toast.add({ title: 'Signed out', description: 'You have been logged out', color: 'info' })
     navigateTo('/login')
   }
 

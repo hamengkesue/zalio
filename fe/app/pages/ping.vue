@@ -18,17 +18,17 @@
     }
   }
 
-  const fmt = (s: string) => new Date(s).toLocaleString('id-ID')
+  const fmt = (s: string) => new Date(s).toLocaleString('en-GB')
 </script>
 
 <template>
   <div class="page">
     <div class="page-body">
       <div class="page-header">
-        <h1 class="page-title">Ping — Contoh Vertical Slice</h1>
+        <h1 class="page-title">Ping — Sample Vertical Slice</h1>
         <p class="page-subtitle">
-          Data di tabel bawah datang dari database lewat backend Go. Tambah pesan untuk
-          membuktikan alur tulis → baca berjalan penuh.
+          The rows below come from the database via the Go backend. Add a message to
+          prove the write → read flow works end to end.
         </p>
       </div>
 
@@ -36,10 +36,10 @@
         <input
           v-model="newMessage"
           class="text-input"
-          placeholder="Tulis pesan baru lalu klik Tambah..."
+          placeholder="Type a new message, then click Add..."
         >
         <button class="btn-primary" :disabled="saving" type="submit">
-          {{ saving ? 'Menyimpan...' : 'Tambah' }}
+          {{ saving ? 'Saving...' : 'Add' }}
         </button>
       </form>
 
@@ -49,8 +49,8 @@
             <thead>
               <tr>
                 <th style="width: 80px">ID</th>
-                <th>Pesan</th>
-                <th style="width: 200px">Dibuat</th>
+                <th>Message</th>
+                <th style="width: 200px">Created</th>
               </tr>
             </thead>
             <tbody>
@@ -61,7 +61,7 @@
               </tr>
               <tr v-if="!pings.length">
                 <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 28px">
-                  Belum ada data
+                  No data yet
                 </td>
               </tr>
             </tbody>

@@ -20,7 +20,7 @@
     <div class="page-body">
       <div class="page-header">
         <h1 class="page-title">Dashboard</h1>
-        <p class="page-subtitle">Kerangka awal Zalio ERP — Fase 0 (Fondasi &amp; Scaffold).</p>
+        <p class="page-subtitle">Zalio ERP starter shell — Phase 0 (Foundation &amp; Scaffold).</p>
       </div>
 
       <div class="stat-grid">
@@ -29,8 +29,8 @@
             <UIcon name="i-lucide-server" />
           </div>
           <div>
-            <div class="stat-label">Status Backend (Go)</div>
-            <div class="stat-value">{{ backendOk ? 'Terhubung' : 'Terputus' }}</div>
+            <div class="stat-label">Backend status (Go)</div>
+            <div class="stat-value">{{ backendOk ? 'Connected' : 'Disconnected' }}</div>
           </div>
         </div>
 
@@ -39,7 +39,7 @@
             <UIcon name="i-lucide-database" />
           </div>
           <div>
-            <div class="stat-label">Baris di tabel tb_ping</div>
+            <div class="stat-label">Rows in tb_ping table</div>
             <div class="stat-value">{{ pings.length }}</div>
           </div>
         </div>
@@ -47,13 +47,13 @@
 
       <div class="info-card">
         <p>
-          🎉 <strong>Fase 0 selesai.</strong> Kerangka proyek sudah tembus dari
-          <strong>database → backend → frontend</strong>. Angka di kartu atas diambil langsung dari backend Go
-          (<code>{{ API_BASE }}</code>) yang membaca database PostgreSQL.
+          🎉 <strong>Phase 0 complete.</strong> The project shell is wired end to end from
+          <strong>database → backend → frontend</strong>. The numbers in the cards above come straight from the Go backend
+          (<code>{{ API_BASE }}</code>) reading the PostgreSQL database.
         </p>
         <p style="margin-top: 10px">
-          Buka menu <strong>Ping (contoh slice)</strong> di kiri untuk mencoba pola tambah-data
-          (tulis → baca) yang akan ditiru semua modul ERP berikutnya (Produk, Inventory, Purchasing, dst.).
+          Open the <strong>Ping (sample slice)</strong> menu on the left to try the write → read pattern
+          that every next ERP module will follow (Products, Inventory, Purchasing, etc.).
         </p>
       </div>
     </div>

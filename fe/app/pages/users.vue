@@ -5,7 +5,7 @@
 
   const showForm = ref(false)
   const saving = ref(false)
-  const form = reactive({ name: '', email: '', password: '', role: 'staff' })
+  const form = reactive({ name: '', username: '', email: '', password: '', role: 'staff' })
 
   onMounted(fetchUsers)
 
@@ -14,18 +14,19 @@
     try {
       await createUser({ ...form })
       form.name = ''
+      form.username = ''
       form.email = ''
       form.password = ''
       form.role = 'staff'
       showForm.value = false
     } catch {
-      // toast sudah ditangani di composable
+      // toast handled in composable
     } finally {
       saving.value = false
     }
   }
 
-  const fmt = (s: string) => new Date(s).toLocaleDateString('id-ID')
+  const fmt = (s: string) => new Date(s).toLocaleDateString('en-GB')
 </script>
 
 <template>
@@ -34,26 +35,30 @@
       <div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px">
         <div>
           <h1 class="page-title">Users</h1>
-          <p class="page-subtitle">Kelola pengguna internal back-office &amp; hak aksesnya.</p>
+          <p class="page-subtitle">Manage internal back-office users &amp; their access.</p>
         </div>
         <button class="btn-primary" @click="showForm = !showForm">
-          {{ showForm ? 'Tutup' : '+ Tambah User' }}
+          {{ showForm ? 'Close' : '+ Add User' }}
         </button>
       </div>
 
       <form v-if="showForm" class="user-form" @submit.prevent="submit">
         <div class="user-form-grid">
           <div>
-            <label class="login-label">Nama</label>
-            <input v-model="form.name" class="text-input" placeholder="Nama lengkap" required>
+            <label class="login-label">Name</label>
+            <input v-model="form.name" class="text-input" placeholder="Full name" required>
+          </div>
+          <div>
+            <label class="login-label">Username</label>
+            <input v-model="form.username" class="text-input" placeholder="e.g. johndoe" required>
           </div>
           <div>
             <label class="login-label">Email</label>
-            <input v-model="form.email" type="email" class="text-input" placeholder="email@contoh.com" required>
+            <input v-model="form.email" type="email" class="text-input" placeholder="email@example.com" required>
           </div>
           <div>
             <label class="login-label">Password</label>
-            <input v-model="form.password" type="password" class="text-input" placeholder="min. 6 karakter" required>
+            <input v-model="form.password" type="password" class="text-input" placeholder="min. 6 characters" required>
           </div>
           <div>
             <label class="login-label">Role</label>
@@ -64,7 +69,7 @@
           </div>
         </div>
         <button class="btn-primary" :disabled="saving" type="submit" style="margin-top:14px; align-self:flex-start">
-          {{ saving ? 'Menyimpan...' : 'Simpan User' }}
+          {{ saving ? 'Saving...' : 'Save User' }}
         </button>
       </form>
 
@@ -74,31 +79,33 @@
             <thead>
               <tr>
                 <th style="width:60px">ID</th>
-                <th>Nama</th>
+                <th>Name</th>
+                <th>Username</th>
                 <th>Email</th>
                 <th>Role</th>
                 <th>Status</th>
-                <th>Dibuat</th>
-                <th class="text-center" style="width:120px">Aksi</th>
+                <th>Created</th>
+                <th class="text-center" style="width:120px">Action</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="u in users" :key="u.id">
                 <td class="font-semibold">{{ u.id }}</td>
                 <td>{{ u.name }}</td>
+                <td class="font-semibold">{{ u.username }}</td>
                 <td>{{ u.email }}</td>
                 <td><span class="badge" :class="u.role === 'admin' ? 'badge-accent' : 'badge-muted'">{{ u.role }}</span></td>
-                <td><span class="badge" :class="u.is_active ? 'badge-success' : 'badge-danger'">{{ u.is_active ? 'aktif' : 'nonaktif' }}</span></td>
+                <td><span class="badge" :class="u.is_active ? 'badge-success' : 'badge-danger'">{{ u.is_active ? 'active' : 'inactive' }}</span></td>
                 <td>{{ fmt(u.created_at) }}</td>
                 <td class="text-center">
                   <button class="link-btn" @click="toggleActive(u)">
-                    {{ u.is_active ? 'Nonaktifkan' : 'Aktifkan' }}
+                    {{ u.is_active ? 'Deactivate' : 'Activate' }}
                   </button>
                 </td>
               </tr>
               <tr v-if="!users.length">
-                <td colspan="7" style="text-align:center; color:var(--text-muted); padding:28px">
-                  Belum ada user
+                <td colspan="8" style="text-align:center; color:var(--text-muted); padding:28px">
+                  No users yet
                 </td>
               </tr>
             </tbody>

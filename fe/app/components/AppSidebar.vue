@@ -11,15 +11,15 @@
       ],
     },
     {
-      label: 'Contoh',
+      label: 'Example',
       items: [
-        { label: 'Ping (contoh slice)', icon: 'i-lucide-radio', to: '/ping' },
+        { label: 'Ping (sample slice)', icon: 'i-lucide-radio', to: '/ping' },
       ],
     },
-    // Menu Administrasi hanya tampil untuk admin.
+    // Administration menu only shows for admins.
     ...(isAdmin.value
       ? [{
-          label: 'Administrasi',
+          label: 'Administration',
           items: [
             { label: 'Users', icon: 'i-lucide-users', to: '/users' },
           ],

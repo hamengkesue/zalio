@@ -1,6 +1,7 @@
 export interface ManagedUser {
   id: number
   name: string
+  username: string
   email: string
   role: string
   is_active: boolean
@@ -18,17 +19,17 @@ export function useUsers() {
       users.value = res.data ?? []
     } catch (e) {
       console.error('Failed to fetch users:', e)
-      toast.add({ title: 'Error', description: 'Gagal memuat daftar user', color: 'error' })
+      toast.add({ title: 'Error', description: 'Failed to load user list', color: 'error' })
     }
   }
 
-  const createUser = async (body: { name: string; email: string; password: string; role: string }) => {
+  const createUser = async (body: { name: string; username: string; email: string; password: string; role: string }) => {
     try {
       await apiFetch('/api/v1/users', { method: 'POST', body })
       await fetchUsers()
-      toast.add({ title: 'Tersimpan', description: 'User baru dibuat', color: 'success' })
+      toast.add({ title: 'Saved', description: 'New user created', color: 'success' })
     } catch (e: any) {
-      toast.add({ title: 'Gagal', description: e?.data?.error || 'Tidak bisa membuat user', color: 'error' })
+      toast.add({ title: 'Failed', description: e?.data?.error || 'Could not create user', color: 'error' })
       throw e
     }
   }
@@ -41,13 +42,13 @@ export function useUsers() {
       })
       u.is_active = !u.is_active
       toast.add({
-        title: 'Status diperbarui',
-        description: `${u.name} kini ${u.is_active ? 'aktif' : 'nonaktif'}`,
+        title: 'Status updated',
+        description: `${u.name} is now ${u.is_active ? 'active' : 'inactive'}`,
         color: 'success',
       })
     } catch (e) {
       console.error('Failed to toggle user:', e)
-      toast.add({ title: 'Error', description: 'Gagal mengubah status', color: 'error' })
+      toast.add({ title: 'Error', description: 'Failed to update status', color: 'error' })
     }
   }
 

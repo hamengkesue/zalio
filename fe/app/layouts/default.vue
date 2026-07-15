@@ -30,7 +30,7 @@
             <span class="topbar-user-role">{{ user.role }}</span>
           </div>
         </div>
-        <button class="icon-btn" title="Keluar" @click="logout">
+        <button class="icon-btn" title="Sign out" @click="logout">
           <UIcon name="i-lucide-log-out" class="text-[18px]" />
         </button>
       </div>

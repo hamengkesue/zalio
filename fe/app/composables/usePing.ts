@@ -17,7 +17,7 @@ export function usePing() {
       pings.value = res.data ?? []
     } catch (e) {
       console.error('Failed to fetch pings:', e)
-      toast.add({ title: 'Error', description: 'Gagal memuat data dari backend', color: 'error' })
+      toast.add({ title: 'Error', description: 'Failed to load data from backend', color: 'error' })
     }
   }
 
@@ -27,7 +27,7 @@ export function usePing() {
       body: { message },
     })
     await fetchPings()
-    toast.add({ title: 'Tersimpan', description: 'Pesan baru ditambahkan ke database', color: 'success' })
+    toast.add({ title: 'Saved', description: 'New message added to the database', color: 'success' })
     return res.data
   }
 
