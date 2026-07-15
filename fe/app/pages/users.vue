@@ -3,6 +3,45 @@
 
   const { users, fetchUsers, createUser, toggleActive } = useUsers()
 
+  // ── search / sort / pagination ──
+  const search = ref('')
+  const sortField = ref('')
+  const sortDesc = ref(false)
+  const page = ref(1)
+  const pageSize = 8
+  const sortOptions = [
+    { label: 'Name', value: 'name' },
+    { label: 'Username', value: 'username' },
+    { label: 'Role', value: 'role' },
+  ]
+
+  const filtered = computed(() => {
+    let list = users.value
+    if (search.value.trim()) {
+      const q = search.value.toLowerCase()
+      list = list.filter(u =>
+        u.name.toLowerCase().includes(q)
+        || u.username.toLowerCase().includes(q)
+        || u.email.toLowerCase().includes(q))
+    }
+    if (sortField.value) {
+      const k = sortField.value
+      list = [...list].sort((a, b) => {
+        const cmp = String((a as any)[k]).localeCompare(String((b as any)[k]))
+        return sortDesc.value ? -cmp : cmp
+      })
+    }
+    return list
+  })
+
+  const paged = computed(() => {
+    const start = (page.value - 1) * pageSize
+    return filtered.value.slice(start, start + pageSize)
+  })
+
+  watch([search, sortField, sortDesc], () => { page.value = 1 })
+
+  // ── create form ──
   const showForm = ref(false)
   const saving = ref(false)
   const form = reactive({ name: '', username: '', email: '', password: '', role: 'staff' })
@@ -32,11 +71,19 @@
 <template>
   <div class="page">
     <div class="page-body">
-      <div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px">
-        <div>
-          <h1 class="page-title">Users</h1>
-          <p class="page-subtitle">Manage internal back-office users &amp; their access.</p>
-        </div>
+      <div class="page-header">
+        <h1 class="page-title">Users</h1>
+        <p class="page-subtitle">Manage internal back-office users &amp; their access.</p>
+      </div>
+
+      <div class="toolbar">
+        <SearchSort
+          v-model="search"
+          v-model:sort="sortField"
+          v-model:desc="sortDesc"
+          :sort-options="sortOptions"
+          placeholder="Search name, username, email..."
+        />
         <button class="btn-primary" @click="showForm = !showForm">
           {{ showForm ? 'Close' : '+ Add User' }}
         </button>
@@ -89,7 +136,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="u in users" :key="u.id">
+              <tr v-for="u in paged" :key="u.id">
                 <td class="font-semibold">{{ u.id }}</td>
                 <td>{{ u.name }}</td>
                 <td class="font-semibold">{{ u.username }}</td>
@@ -103,14 +150,11 @@
                   </button>
                 </td>
               </tr>
-              <tr v-if="!users.length">
-                <td colspan="8" style="text-align:center; color:var(--text-muted); padding:28px">
-                  No users yet
-                </td>
-              </tr>
             </tbody>
           </table>
+          <EmptyState v-if="!filtered.length" text="No users found" icon="i-lucide-users" />
         </div>
+        <TablePager v-model:page="page" :total="filtered.length" :page-size="pageSize" />
       </div>
     </div>
   </div>
@@ -141,9 +185,5 @@
   }
   .link-btn:hover {
     text-decoration: underline;
-  }
-  .badge-muted {
-    background-color: var(--bg-muted);
-    color: var(--text-muted);
   }
 </style>

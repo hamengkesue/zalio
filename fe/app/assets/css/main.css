@@ -4,6 +4,10 @@
 :root {
   --font-family: 'Nunito Sans', sans-serif;
 
+  /* Brand */
+  --navy-500: #25258C;
+  --navy-50: #EDEDF8;
+
   /* Semantic */
   --accent: #0070F2;
   --accent-light: #E8F0FE;
@@ -35,6 +39,8 @@
 }
 
 .dark {
+  --navy-500: #6366F1;
+  --navy-50: #2A2A3E;
   --accent: #4A9EFF;
   --accent-light: #1E2A3A;
   --purple: #A78BFA;
@@ -79,7 +85,17 @@ body {
   flex-direction: column;
   gap: 20px;
   padding: 24px;
-  overflow: auto;
+  overflow: hidden;
+}
+
+/* ── Toolbar (search + actions row) ── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 /* ── Page header ── */
@@ -197,10 +213,19 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 .table-scroll {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+}
+.table-scroll > .data-table {
+  flex-shrink: 0;
 }
 .data-table {
   width: 100%;
@@ -216,21 +241,72 @@ body {
   background-color: var(--bg-muted);
   border-bottom: 1px solid var(--border-color);
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 .data-table td {
-  padding: 14px 18px;
+  padding: 10px 18px;
   color: var(--text-primary);
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
 }
-.data-table tbody tr:last-child td {
-  border-bottom: none;
+.data-table tbody tr {
+  height: 64px;
 }
+/* setiap baris punya garis batas bawah (termasuk baris terakhir) */
 .data-table tbody tr:hover {
   background-color: var(--bg-row-hover);
 }
+.data-table .text-right { text-align: right; }
 .data-table .text-center { text-align: center; }
 .font-semibold { font-weight: 600; }
+
+/* ── Pager footer ── */
+.table-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+.pager-info {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.pager-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.pager-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.pager-btn:hover:not(:disabled):not(.active) {
+  background-color: var(--bg-hover);
+}
+.pager-btn.active {
+  background-color: var(--accent);
+  color: #fff;
+}
+.pager-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
 
 /* ── Badges ── */
 .badge {
