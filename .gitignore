@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Nuxt / build output
+.nuxt/
+.output/
+.data/
+dist/
+
+# Go
+be/api
+*.exe
+
+# Env & secrets
+.env
+
+# Logs
+*.log
+
+# OS
+.DS_Store

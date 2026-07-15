@@ -1,0 +1,22 @@
+{
+  "name": "zalio-erp-fe",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "generate": "nuxt generate"
+  },
+  "dependencies": {
+    "@iconify-json/lucide": "^1.2.113",
+    "@nuxt/ui": "^3",
+    "nuxt": "^3.17",
+    "vue": "^3.5",
+    "vue-router": "^4.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.8"
+  },
+  "packageManager": "yarn@1.22.22"
+}

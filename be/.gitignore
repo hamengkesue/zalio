@@ -1,0 +1,6 @@
+# Binaries
+api
+*.exe
+
+# Env
+.env
