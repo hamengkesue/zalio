@@ -133,6 +133,17 @@
 
   // Label role untuk tampilan.
   const roleLabel = (r: string) => (r === 'admin' ? 'Administrator' : 'Operator')
+
+  // Group Access = multi-select. Nilai disimpan di form.group_access sebagai
+  // teks dipisah koma (mis. "Finance,Warehouse"). Opsi masih placeholder.
+  const GROUP_OPTIONS = ['Management', 'Finance', 'Warehouse', 'Sales', 'HR']
+  const groupList = () => form.group_access.split(',').map(s => s.trim()).filter(Boolean)
+  const hasGroup = (g: string) => groupList().includes(g)
+  function toggleGroup(g: string) {
+    const set = new Set(groupList())
+    set.has(g) ? set.delete(g) : set.add(g)
+    form.group_access = [...set].join(',')
+  }
   const errors = reactive({ name: '', username: '', email: '', whatsapp: '', password: '' })
   const imgError = reactive<Record<string, boolean>>({})
 
@@ -318,9 +329,8 @@
             :sort-options="sortOptions"
             placeholder="Search name, username, email..."
           />
-          <button class="filter-btn" :class="{ 'filter-btn--active': filterActive }" @click="showFilter = true">
+          <button class="filter-btn" :class="{ 'filter-btn--active': filterActive }" title="Filter" @click="showFilter = true">
             <UIcon name="i-lucide-list-filter" />
-            <span>Filter</span>
             <span v-if="filterActive" class="filter-dot" />
           </button>
         </div>
@@ -466,10 +476,16 @@
 
             <div>
               <label class="form-label">Group Access</label>
-              <select v-model="form.group_access" class="text-input">
-                <option value="">—</option>
-                <!-- opsi grup ditambahkan menyusul -->
-              </select>
+              <div class="group-chips">
+                <button
+                  v-for="g in GROUP_OPTIONS"
+                  :key="g"
+                  type="button"
+                  class="group-chip"
+                  :class="{ 'group-chip--on': hasGroup(g) }"
+                  @click="toggleGroup(g)"
+                >{{ g }}</button>
+              </div>
             </div>
 
             <div>
@@ -719,22 +735,23 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    min-width: 0;
   }
   .filter-btn {
     position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    height: 42px;
-    padding: 0 14px;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
     border-radius: 10px;
     background: var(--bg-surface);
     border: 1px solid var(--border-color);
     color: var(--text-secondary);
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 18px;
     cursor: pointer;
+    flex-shrink: 0;
     transition: border-color 0.15s ease, color 0.15s ease;
   }
   .filter-btn:hover {
@@ -746,6 +763,9 @@
     color: var(--accent);
   }
   .filter-dot {
+    position: absolute;
+    top: 6px;
+    right: 6px;
     width: 7px;
     height: 7px;
     border-radius: 50%;
@@ -796,6 +816,32 @@
     background: var(--accent);
     color: #fff;
     font-weight: 600;
+  }
+
+  /* ── Group Access multi-select (chip toggle) ── */
+  .group-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .group-chip {
+    padding: 7px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .group-chip:hover {
+    border-color: var(--accent);
+  }
+  .group-chip--on {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
   }
 
   /* Indikator "sedang memuat batch berikutnya" (infinite scroll). */
