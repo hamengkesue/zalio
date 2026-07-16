@@ -18,6 +18,12 @@ type Config struct {
 	ServerPort string
 	CORSOrigin string
 	JWTSecret  string
+
+	MinioEndpoint  string
+	MinioBucket    string
+	MinioAccessKey string
+	MinioSecretKey string
+	MinioUseSSL    bool
 }
 
 // Load membaca .env (kalau ada) lalu environment, dengan nilai default aman.
@@ -34,6 +40,12 @@ func Load() *Config {
 		ServerPort: getEnv("SERVER_PORT", "8082"),
 		CORSOrigin: getEnv("CORS_ORIGIN", "*"),
 		JWTSecret:  getEnv("JWT_SECRET", "dev-secret-ganti-di-produksi"),
+
+		MinioEndpoint:  getEnv("MINIO_ENDPOINT", "localhost:9004"),
+		MinioBucket:    getEnv("MINIO_BUCKET", "zalio-erp"),
+		MinioAccessKey: getEnv("MINIO_ACCESS_KEY", "zalio_erp_minio"),
+		MinioSecretKey: getEnv("MINIO_SECRET_KEY", "zalio_erp_minio_secret"),
+		MinioUseSSL:    getEnv("MINIO_USE_SSL", "false") == "true",
 	}
 }
 

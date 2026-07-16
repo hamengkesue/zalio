@@ -1,7 +1,7 @@
 <script setup lang="ts">
   useHead({ title: 'Zalio ERP — Internal Users' })
 
-  const { users, fetchUsers, createUser, toggleActive } = useUsers()
+  const { users, fetchUsers, createUser, uploadProfileImage, toggleActive } = useUsers()
   const toast = useToast()
 
   // ── search / sort / pagination ──
@@ -46,8 +46,41 @@
   const showForm = ref(false)
   const saving = ref(false)
   const showPassword = ref(false)
-  const form = reactive({ name: '', username: '', email: '', whatsapp: '', password: '', role: 'staff' })
+  const form = reactive({ name: '', username: '', email: '', whatsapp: '', profile_image: '', password: '', role: 'staff' })
   const errors = reactive({ name: '', username: '', email: '', whatsapp: '', password: '' })
+  const imgError = reactive<Record<string, boolean>>({})
+
+  // ── upload gambar profil ──
+  const fileInput = ref<HTMLInputElement>()
+  const uploading = ref(false)
+
+  // Klik lingkaran avatar: buka filepicker HANYA kalau masih kosong.
+  function onAvatarClick() {
+    if (!form.profile_image) fileInput.value?.click()
+  }
+
+  async function onFileChange(e: Event) {
+    const input = e.target as HTMLInputElement
+    const file = input.files?.[0]
+    input.value = '' // reset supaya bisa memilih file yang sama lagi
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.add({ title: 'Invalid file', description: 'Please choose an image file', color: 'error' })
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.add({ title: 'File too large', description: 'Maximum size is 2 MB', color: 'error' })
+      return
+    }
+    uploading.value = true
+    try {
+      form.profile_image = await uploadProfileImage(file)
+    } catch (err: any) {
+      toast.add({ title: 'Upload failed', description: err?.data?.error || 'Could not upload image', color: 'error' })
+    } finally {
+      uploading.value = false
+    }
+  }
 
   onMounted(fetchUsers)
 
@@ -56,6 +89,7 @@
     form.username = ''
     form.email = ''
     form.whatsapp = ''
+    form.profile_image = ''
     form.password = ''
     form.role = 'staff'
     errors.name = ''
@@ -249,6 +283,28 @@
             </div>
 
             <div>
+              <label class="form-label">Profile Image</label>
+              <input ref="fileInput" type="file" accept="image/*" hidden @change="onFileChange">
+              <div class="avatar-row">
+                <div class="avatar-upload" :class="{ empty: !form.profile_image }" @click="onAvatarClick">
+                  <img v-if="form.profile_image" :src="`${API_BASE}/files/${form.profile_image}`" alt="">
+                  <UIcon v-else-if="uploading" name="i-lucide-loader-circle" class="avatar-cam spin" />
+                  <UIcon v-else name="i-lucide-camera" class="avatar-cam" />
+                  <button
+                    v-if="form.profile_image"
+                    type="button"
+                    class="avatar-remove"
+                    title="Remove image"
+                    @click.stop="form.profile_image = ''"
+                  >
+                    <UIcon name="i-lucide-x" />
+                  </button>
+                </div>
+                <p class="upload-hint">JPG, PNG, WEBP or GIF · <span class="hint-max">max 2 MB</span></p>
+              </div>
+            </div>
+
+            <div>
               <label class="form-label">Role</label>
               <select v-model="form.role" class="text-input">
                 <option value="staff">staff</option>
@@ -271,6 +327,7 @@
           <table class="data-table">
             <thead>
               <tr>
+                <th class="text-center" style="width:64px">Photo</th>
                 <th>Full Name</th>
                 <th>Username</th>
                 <th>Email</th>
@@ -280,6 +337,16 @@
             </thead>
             <tbody>
               <tr v-for="u in paged" :key="u.id">
+                <td class="text-center">
+                  <img
+                    v-if="u.profile_image && !imgError[u.id]"
+                    :src="`${API_BASE}/files/${u.profile_image}`"
+                    class="avatar-img"
+                    alt=""
+                    @error="imgError[u.id] = true"
+                  >
+                  <div v-else class="avatar-fallback"><UIcon name="i-lucide-user" /></div>
+                </td>
                 <td>{{ u.name }}</td>
                 <td class="font-semibold">{{ u.username }}</td>
                 <td>{{ u.email }}</td>
@@ -407,6 +474,96 @@
   .btn-ghost:hover {
     background: var(--bg-hover);
     color: var(--text-primary);
+  }
+
+  /* ── Avatar ── */
+  .avatar-img,
+  .avatar-fallback {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: inline-flex;
+  }
+  .avatar-img {
+    object-fit: cover;
+  }
+  .avatar-fallback {
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-muted);
+    color: var(--text-muted);
+    font-size: 18px;
+  }
+
+  /* ── Upload profile image (avatar) ── */
+  .avatar-upload {
+    position: relative;
+    width: 84px;
+    height: 84px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-muted);
+    border: 1px solid var(--border-color);
+  }
+  .avatar-upload.empty {
+    cursor: pointer;
+  }
+  .avatar-upload.empty:hover {
+    border-color: var(--accent);
+  }
+  .avatar-upload.empty:hover .avatar-cam {
+    color: var(--accent);
+  }
+  .avatar-upload img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .avatar-cam {
+    font-size: 26px;
+    color: var(--text-muted);
+  }
+  /* Tombol X: menutupi lingkaran, muncul saat hover, klik untuk hapus. */
+  .avatar-remove {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    font-size: 24px;
+    border: none;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .avatar-upload:hover .avatar-remove {
+    opacity: 1;
+  }
+  .spin {
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  .avatar-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .upload-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+  .hint-max {
+    color: var(--danger);
+    font-weight: 600;
   }
 
   /* ── Status on/off toggle ── */

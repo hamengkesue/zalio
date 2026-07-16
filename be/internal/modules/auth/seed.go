@@ -24,7 +24,7 @@ func EnsureSeed(ctx context.Context, pool *pgxpool.Pool) error {
 	if err != nil {
 		return err
 	}
-	if _, err := repo.Create(ctx, "Administrator", "admin", "admin@zalio.local", "", string(hash), "admin"); err != nil {
+	if _, err := repo.Create(ctx, "Administrator", "admin", "admin@zalio.local", "", "", string(hash), "admin"); err != nil {
 		return err
 	}
 

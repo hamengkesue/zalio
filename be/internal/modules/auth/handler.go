@@ -81,10 +81,11 @@ func (h *Handler) CreateUser(c *gin.Context) {
 	var req struct {
 		Name     string `json:"name" binding:"required"`
 		Username string `json:"username" binding:"required"`
-		Email    string `json:"email" binding:"required,email"`
-		Whatsapp string `json:"whatsapp"`
-		Password string `json:"password" binding:"required,min=6"`
-		Role     string `json:"role"`
+		Email        string `json:"email" binding:"required,email"`
+		Whatsapp     string `json:"whatsapp"`
+		ProfileImage string `json:"profile_image"`
+		Password     string `json:"password" binding:"required,min=6"`
+		Role         string `json:"role"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -100,7 +101,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	u, err := h.repo.Create(c.Request.Context(), req.Name, req.Username, req.Email, req.Whatsapp, string(hash), req.Role)
+	u, err := h.repo.Create(c.Request.Context(), req.Name, req.Username, req.Email, req.Whatsapp, req.ProfileImage, string(hash), req.Role)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique_violation

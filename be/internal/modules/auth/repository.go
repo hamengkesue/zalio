@@ -16,13 +16,13 @@ func NewRepo(pool *pgxpool.Pool) *Repo {
 
 // Kolom aman (tanpa password_hash). id di-cast ke text (UUID),
 // full_name -> Name, whatsapp_number -> Whatsapp.
-const userCols = `id::text, full_name, username, email, COALESCE(whatsapp_number, '') AS whatsapp, role, is_active, created_at`
+const userCols = `id::text, full_name, username, email, COALESCE(whatsapp_number, '') AS whatsapp, COALESCE(profile_image, '') AS profile_image, role, is_active, created_at`
 
 func scanUser(row interface {
 	Scan(dest ...any) error
 }) (*User, error) {
 	var u User
-	if err := row.Scan(&u.ID, &u.Name, &u.Username, &u.Email, &u.Whatsapp, &u.Role, &u.IsActive, &u.CreatedAt); err != nil {
+	if err := row.Scan(&u.ID, &u.Name, &u.Username, &u.Email, &u.Whatsapp, &u.ProfileImage, &u.Role, &u.IsActive, &u.CreatedAt); err != nil {
 		return nil, err
 	}
 	return &u, nil
@@ -62,12 +62,12 @@ func (r *Repo) GetCredentialsByUsername(ctx context.Context, username string) (*
 	return &cr, nil
 }
 
-func (r *Repo) Create(ctx context.Context, name, username, email, whatsapp, passwordHash, role string) (*User, error) {
+func (r *Repo) Create(ctx context.Context, name, username, email, whatsapp, profileImage, passwordHash, role string) (*User, error) {
 	return scanUser(r.pool.QueryRow(ctx,
-		`INSERT INTO m_internal_user (full_name, username, email, whatsapp_number, password_hash, role)
-		 VALUES ($1, $2, $3, $4, $5, $6)
+		`INSERT INTO m_internal_user (full_name, username, email, whatsapp_number, profile_image, password_hash, role)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)
 		 RETURNING `+userCols,
-		name, username, email, whatsapp, passwordHash, role))
+		name, username, email, whatsapp, profileImage, passwordHash, role))
 }
 
 func (r *Repo) ToggleActive(ctx context.Context, id string, isActive bool) (*User, error) {

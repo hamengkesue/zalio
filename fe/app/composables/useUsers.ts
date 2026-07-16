@@ -4,6 +4,7 @@ export interface ManagedUser {
   username: string
   email: string
   whatsapp: string
+  profile_image: string
   role: string
   is_active: boolean
   created_at: string
@@ -24,11 +25,19 @@ export function useUsers() {
     }
   }
 
-  const createUser = async (body: { name: string; username: string; email: string; whatsapp: string; password: string; role: string }) => {
+  const createUser = async (body: { name: string; username: string; email: string; whatsapp: string; profile_image: string; password: string; role: string }) => {
     // Error dilempar ke pemanggil (users.vue) supaya bisa ditampilkan inline per-field.
     await apiFetch('/api/v1/users', { method: 'POST', body })
     await fetchUsers()
     toast.add({ title: 'Saved', description: 'New user created', color: 'success' })
+  }
+
+  // Upload gambar profil → MinIO; kembalikan path yang disimpan.
+  const uploadProfileImage = async (file: File): Promise<string> => {
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await apiFetch<{ path: string }>('/api/v1/upload/profile-image', { method: 'POST', body: fd })
+    return res.path
   }
 
   const toggleActive = async (u: ManagedUser) => {
@@ -49,5 +58,5 @@ export function useUsers() {
     }
   }
 
-  return { users, fetchUsers, createUser, toggleActive }
+  return { users, fetchUsers, createUser, uploadProfileImage, toggleActive }
 }

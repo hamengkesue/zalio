@@ -8,9 +8,10 @@ type User struct {
 	ID        string    `json:"id"` // UUID
 	Name      string    `json:"name"`
 	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	Whatsapp  string    `json:"whatsapp"`
-	Role      string    `json:"role"`
+	Email        string    `json:"email"`
+	Whatsapp     string    `json:"whatsapp"`
+	ProfileImage string    `json:"profile_image"`
+	Role         string    `json:"role"`
 	IsActive  bool      `json:"is_active"`
 	CreatedAt time.Time `json:"created_at"`
 }
