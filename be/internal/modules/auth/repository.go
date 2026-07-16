@@ -16,13 +16,13 @@ func NewRepo(pool *pgxpool.Pool) *Repo {
 
 // Kolom aman (tanpa password_hash). id di-cast ke text (UUID),
 // full_name -> Name, whatsapp_number -> Whatsapp.
-const userCols = `id::text, full_name, username, email, COALESCE(whatsapp_number, '') AS whatsapp, COALESCE(profile_image, '') AS profile_image, role, is_active, created_at`
+const userCols = `id::text, full_name, username, email, COALESCE(whatsapp_number, '') AS whatsapp, COALESCE(profile_image, '') AS profile_image, COALESCE(group_access, '') AS group_access, role, is_active, created_at`
 
 func scanUser(row interface {
 	Scan(dest ...any) error
 }) (*User, error) {
 	var u User
-	if err := row.Scan(&u.ID, &u.Name, &u.Username, &u.Email, &u.Whatsapp, &u.ProfileImage, &u.Role, &u.IsActive, &u.CreatedAt); err != nil {
+	if err := row.Scan(&u.ID, &u.Name, &u.Username, &u.Email, &u.Whatsapp, &u.ProfileImage, &u.GroupAccess, &u.Role, &u.IsActive, &u.CreatedAt); err != nil {
 		return nil, err
 	}
 	return &u, nil
@@ -62,22 +62,22 @@ func (r *Repo) GetCredentialsByUsername(ctx context.Context, username string) (*
 	return &cr, nil
 }
 
-func (r *Repo) Create(ctx context.Context, name, username, email, whatsapp, profileImage, passwordHash, role string) (*User, error) {
+func (r *Repo) Create(ctx context.Context, name, username, email, whatsapp, profileImage, groupAccess, passwordHash, role string) (*User, error) {
 	return scanUser(r.pool.QueryRow(ctx,
-		`INSERT INTO m_internal_user (full_name, username, email, whatsapp_number, profile_image, password_hash, role)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)
+		`INSERT INTO m_internal_user (full_name, username, email, whatsapp_number, profile_image, group_access, password_hash, role)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		 RETURNING `+userCols,
-		name, username, email, whatsapp, profileImage, passwordHash, role))
+		name, username, email, whatsapp, profileImage, groupAccess, passwordHash, role))
 }
 
 // Update mengubah data user (username tidak diubah). modified_at diurus trigger.
-func (r *Repo) Update(ctx context.Context, id, name, email, whatsapp, profileImage, role string) (*User, error) {
+func (r *Repo) Update(ctx context.Context, id, name, email, whatsapp, profileImage, groupAccess, role string) (*User, error) {
 	return scanUser(r.pool.QueryRow(ctx,
 		`UPDATE m_internal_user
-		 SET full_name = $1, email = $2, whatsapp_number = $3, profile_image = $4, role = $5
-		 WHERE id = $6::uuid
+		 SET full_name = $1, email = $2, whatsapp_number = $3, profile_image = $4, group_access = $5, role = $6
+		 WHERE id = $7::uuid
 		 RETURNING `+userCols,
-		name, email, whatsapp, profileImage, role, id))
+		name, email, whatsapp, profileImage, groupAccess, role, id))
 }
 
 func (r *Repo) UpdatePassword(ctx context.Context, id, passwordHash string) error {

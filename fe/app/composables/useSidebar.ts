@@ -1,4 +1,4 @@
-const collapsed = ref(false)
+const collapsed = ref(true) // default: collapsed
 
 export function useSidebar() {
   function toggle() {

@@ -49,17 +49,22 @@
   const saving = ref(false)
   const showPassword = ref(false)
   const passwordEditing = ref(false) // hanya relevan di mode edit
-  const form = reactive({ name: '', username: '', email: '', whatsapp: '', profile_image: '', password: '', role: 'staff' })
+  const form = reactive({ name: '', username: '', email: '', whatsapp: '', group_access: '', profile_image: '', password: '', role: 'staff' })
+
+  // Label role untuk tampilan.
+  const roleLabel = (r: string) => (r === 'admin' ? 'Administrator' : 'Operator')
   const errors = reactive({ name: '', username: '', email: '', whatsapp: '', password: '' })
   const imgError = reactive<Record<string, boolean>>({})
 
   // ── upload gambar profil ──
   const fileInput = ref<HTMLInputElement>()
   const uploading = ref(false)
+  const previewUrl = ref('') // URL gambar yang sedang di-preview (lightbox)
 
   // Klik lingkaran avatar: buka filepicker HANYA kalau masih kosong.
   function onAvatarClick() {
     if (!form.profile_image) fileInput.value?.click()
+    else previewUrl.value = API_BASE + '/files/' + form.profile_image
   }
 
   async function onFileChange(e: Event) {
@@ -92,6 +97,7 @@
     form.username = ''
     form.email = ''
     form.whatsapp = ''
+    form.group_access = ''
     form.profile_image = ''
     form.password = ''
     form.role = 'staff'
@@ -126,6 +132,7 @@
     form.username = u.username
     form.email = u.email
     form.whatsapp = u.whatsapp
+    form.group_access = u.group_access
     form.profile_image = u.profile_image
     form.role = u.role
     form.password = ''
@@ -333,33 +340,37 @@
             </div>
 
             <div>
+              <label class="form-label">Role</label>
+              <select v-model="form.role" class="text-input" :disabled="!isAdmin">
+                <option value="admin">Administrator</option>
+                <option value="staff">Operator</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="form-label">Group Access</label>
+              <select v-model="form.group_access" class="text-input">
+                <option value="">—</option>
+                <!-- opsi grup ditambahkan menyusul -->
+              </select>
+            </div>
+
+            <div>
               <label class="form-label">Profile Image</label>
               <input ref="fileInput" type="file" accept="image/*" hidden @change="onFileChange">
               <div class="avatar-row">
-                <div class="avatar-upload" :class="{ empty: !form.profile_image }" @click="onAvatarClick">
-                  <img v-if="form.profile_image" :src="`${API_BASE}/files/${form.profile_image}`" alt="">
-                  <UIcon v-else-if="uploading" name="i-lucide-loader-circle" class="avatar-cam spin" />
-                  <UIcon v-else name="i-lucide-camera" class="avatar-cam" />
-                  <button
-                    v-if="form.profile_image"
-                    type="button"
-                    class="avatar-remove"
-                    title="Remove image"
-                    @click.stop="form.profile_image = ''"
-                  >
+                <div class="avatar-wrap">
+                  <div class="avatar-upload" :class="{ empty: !form.profile_image }" @click="onAvatarClick">
+                    <img v-if="form.profile_image" :src="`${API_BASE}/files/${form.profile_image}`" alt="">
+                    <UIcon v-else-if="uploading" name="i-lucide-loader-circle" class="avatar-cam spin" />
+                    <UIcon v-else name="i-lucide-camera" class="avatar-cam" />
+                  </div>
+                  <button v-if="form.profile_image" type="button" class="avatar-x" title="Remove image" @click="form.profile_image = ''">
                     <UIcon name="i-lucide-x" />
                   </button>
                 </div>
                 <p class="upload-hint">JPG, PNG, WEBP or GIF · <span class="hint-max">max 2 MB</span></p>
               </div>
-            </div>
-
-            <div>
-              <label class="form-label">Role</label>
-              <select v-model="form.role" class="text-input" :disabled="!isAdmin">
-                <option value="staff">staff</option>
-                <option value="admin">admin</option>
-              </select>
             </div>
           </div>
 
@@ -372,16 +383,27 @@
         </form>
       </AppModal>
 
+      <!-- Lightbox preview gambar profil -->
+      <Teleport to="body">
+        <Transition name="modal">
+          <div v-if="previewUrl" class="img-lightbox" @click="previewUrl = ''">
+            <img :src="previewUrl" alt="Profile image preview">
+          </div>
+        </Transition>
+      </Teleport>
+
       <div class="table-card">
         <div class="table-scroll">
           <table class="data-table">
             <thead>
               <tr>
-                <th class="text-center" style="width:64px">Photo</th>
-                <th>Full Name</th>
+                <th style="width:56px" />
+                <th style="min-width:190px">Full Name</th>
                 <th>Username</th>
-                <th>Email</th>
+                <th style="min-width:200px">Email</th>
+                <th>WhatsApp</th>
                 <th>Role</th>
+                <th>Group Access</th>
                 <th class="text-center" style="width:110px">Status</th>
               </tr>
             </thead>
@@ -400,7 +422,9 @@
                 <td>{{ u.name }}</td>
                 <td class="font-semibold">{{ u.username }}</td>
                 <td>{{ u.email }}</td>
-                <td><span class="badge" :class="u.role === 'admin' ? 'badge-accent' : 'badge-muted'">{{ u.role }}</span></td>
+                <td>{{ u.whatsapp || '—' }}</td>
+                <td>{{ roleLabel(u.role) }}</td>
+                <td>{{ u.group_access || '—' }}</td>
                 <td class="text-center">
                   <button
                     class="toggle"
@@ -550,27 +574,42 @@
   .avatar-img,
   .avatar-fallback {
     width: 34px;
+    min-width: 34px;
     height: 34px;
     border-radius: 50%;
-    display: inline-flex;
   }
   .avatar-img {
+    display: block;
+    margin: 0 auto;
     object-fit: cover;
   }
   .avatar-fallback {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     background: var(--bg-muted);
     color: var(--text-muted);
     font-size: 18px;
   }
+  /* Avatar + nama dalam satu kolom */
+  .user-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .user-cell .avatar-img,
+  .user-cell .avatar-fallback {
+    flex-shrink: 0;
+  }
 
   /* ── Upload profile image (avatar) ── */
-  .avatar-upload {
+  .avatar-wrap {
     position: relative;
+    flex-shrink: 0;
+  }
+  .avatar-upload {
     width: 84px;
     height: 84px;
-    flex-shrink: 0;
     border-radius: 50%;
     overflow: hidden;
     display: flex;
@@ -578,8 +617,6 @@
     justify-content: center;
     background: var(--bg-muted);
     border: 1px solid var(--border-color);
-  }
-  .avatar-upload.empty {
     cursor: pointer;
   }
   .avatar-upload.empty:hover {
@@ -597,23 +634,22 @@
     font-size: 26px;
     color: var(--text-muted);
   }
-  /* Tombol X: menutupi lingkaran, muncul saat hover, klik untuk hapus. */
-  .avatar-remove {
+  /* Tombol X di pojok kanan atas untuk hapus gambar. */
+  .avatar-x {
     position: absolute;
-    inset: 0;
+    top: 0;
+    right: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--danger);
     color: #fff;
-    font-size: 24px;
-    border: none;
+    font-size: 11px;
+    border: 2px solid var(--bg-surface);
     cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
-  .avatar-upload:hover .avatar-remove {
-    opacity: 1;
   }
   .spin {
     animation: spin 0.8s linear infinite;
@@ -634,6 +670,27 @@
   .hint-max {
     color: var(--danger);
     font-weight: 600;
+  }
+
+  /* ── Image preview lightbox ── */
+  .img-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(2px);
+    cursor: zoom-out;
+  }
+  .img-lightbox img {
+    width: min(300px, 80vw);
+    height: min(300px, 80vw);
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
   }
 
   /* ── Status on/off toggle ── */

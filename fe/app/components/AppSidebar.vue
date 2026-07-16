@@ -25,44 +25,29 @@
   ]
   const isSettingsActive = computed(() => settingsItems.some(i => i.to === route.path))
 
-  // ── Popover Settings ──
+  // ── Flyout submenu Settings (muncul saat hover, melayang ke kanan) ──
   const btnRef = ref<HTMLElement>()
-  const popRef = ref<HTMLElement>()
   const settingsOpen = ref(false)
   const popStyle = ref<Record<string, string>>({})
+  let hideTimer: ReturnType<typeof setTimeout> | null = null
 
-  function openSettings() {
+  function showSettings() {
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null }
     const el = btnRef.value
-    if (!el) return
-    const r = el.getBoundingClientRect()
-    popStyle.value = {
-      left: `${r.left}px`,
-      bottom: `${window.innerHeight - r.top + 8}px`,
-      minWidth: `${Math.max(r.width, 210)}px`,
+    if (el) {
+      const r = el.getBoundingClientRect()
+      popStyle.value = {
+        left: `${r.right + 10}px`,
+        bottom: `${window.innerHeight - r.bottom}px`,
+        minWidth: '200px',
+      }
     }
     settingsOpen.value = true
   }
-  function toggleSettings() {
-    if (settingsOpen.value) settingsOpen.value = false
-    else openSettings()
+  function hideSettingsSoon() {
+    if (hideTimer) clearTimeout(hideTimer)
+    hideTimer = setTimeout(() => { settingsOpen.value = false }, 120)
   }
-
-  function onDocClick(e: MouseEvent) {
-    const t = e.target as Node
-    if (btnRef.value?.contains(t) || popRef.value?.contains(t)) return
-    settingsOpen.value = false
-  }
-  function onKey(e: KeyboardEvent) {
-    if (e.key === 'Escape') settingsOpen.value = false
-  }
-  onMounted(() => {
-    document.addEventListener('click', onDocClick)
-    window.addEventListener('keydown', onKey)
-  })
-  onUnmounted(() => {
-    document.removeEventListener('click', onDocClick)
-    window.removeEventListener('keydown', onKey)
-  })
 </script>
 
 <template>
@@ -86,19 +71,19 @@
       </div>
     </nav>
 
-    <!-- ── Settings (buka popover di atasnya) ── -->
-    <div v-if="isAdmin" class="sidebar-settings">
+    <!-- ── Settings (submenu muncul saat hover) ── -->
+    <div v-if="isAdmin" class="sidebar-settings" @mouseenter="showSettings" @mouseleave="hideSettingsSoon">
       <button
         ref="btnRef"
+        type="button"
         class="sidebar-item settings-toggle"
         :class="{ active: isSettingsActive || settingsOpen }"
         :title="collapsed ? 'Settings' : undefined"
-        @click="toggleSettings"
       >
         <UIcon name="i-lucide-settings" class="sidebar-icon" />
         <template v-if="!collapsed">
           <span class="sidebar-label">Settings</span>
-          <UIcon name="i-lucide-chevron-up" class="settings-caret" :class="{ flip: settingsOpen }" />
+          <UIcon name="i-lucide-chevron-right" class="settings-caret" />
         </template>
       </button>
     </div>
@@ -109,10 +94,16 @@
       <span v-if="!collapsed" class="sidebar-label">Collapse</span>
     </button>
 
-    <!-- ── Popover (melayang di atas tombol Settings) ── -->
+    <!-- ── Flyout submenu (melayang ke kanan tombol Settings) ── -->
     <Teleport to="body">
       <Transition name="pop">
-        <div v-if="settingsOpen" ref="popRef" class="settings-popover" :style="popStyle">
+        <div
+          v-if="settingsOpen"
+          class="settings-popover"
+          :style="popStyle"
+          @mouseenter="showSettings"
+          @mouseleave="hideSettingsSoon"
+        >
           <span class="settings-popover-title">Settings</span>
           <NuxtLink
             v-for="it in settingsItems"
@@ -270,16 +261,16 @@
     flex-direction: column;
     gap: 2px;
   }
-  /* caret pointing down to the Settings button */
+  /* caret menunjuk ke kiri (ke tombol Settings) */
   .settings-popover::after {
     content: '';
     position: absolute;
-    bottom: -6px;
-    left: 20px;
+    left: -6px;
+    bottom: 16px;
     width: 11px;
     height: 11px;
     background: var(--bg-surface);
-    border-right: 1px solid var(--border-color);
+    border-left: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
     transform: rotate(45deg);
   }
@@ -324,6 +315,6 @@
   .pop-enter-from,
   .pop-leave-to {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateX(-6px);
   }
 </style>

@@ -4,6 +4,7 @@ export interface ManagedUser {
   username: string
   email: string
   whatsapp: string
+  group_access: string
   profile_image: string
   role: string
   is_active: boolean
@@ -25,14 +26,14 @@ export function useUsers() {
     }
   }
 
-  const createUser = async (body: { name: string; username: string; email: string; whatsapp: string; profile_image: string; password: string; role: string }) => {
+  const createUser = async (body: { name: string; username: string; email: string; whatsapp: string; group_access: string; profile_image: string; password: string; role: string }) => {
     // Error dilempar ke pemanggil (users.vue) supaya bisa ditampilkan inline per-field.
     await apiFetch('/api/v1/users', { method: 'POST', body })
     await fetchUsers()
     toast.add({ title: 'Saved', description: 'New user created', color: 'success' })
   }
 
-  const updateUser = async (id: string, body: { name: string; email: string; whatsapp: string; profile_image: string; password: string; role: string }) => {
+  const updateUser = async (id: string, body: { name: string; email: string; whatsapp: string; group_access: string; profile_image: string; password: string; role: string }) => {
     await apiFetch(`/api/v1/users/${id}`, { method: 'PUT', body })
     await fetchUsers()
     toast.add({ title: 'Saved', description: 'User updated', color: 'success' })

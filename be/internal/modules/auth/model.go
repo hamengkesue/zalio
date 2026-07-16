@@ -11,6 +11,7 @@ type User struct {
 	Email        string    `json:"email"`
 	Whatsapp     string    `json:"whatsapp"`
 	ProfileImage string    `json:"profile_image"`
+	GroupAccess  string    `json:"group_access"`
 	Role         string    `json:"role"`
 	IsActive  bool      `json:"is_active"`
 	CreatedAt time.Time `json:"created_at"`

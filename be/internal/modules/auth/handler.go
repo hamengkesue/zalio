@@ -83,6 +83,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		Email        string `json:"email" binding:"required,email"`
 		Whatsapp     string `json:"whatsapp"`
 		ProfileImage string `json:"profile_image"`
+		GroupAccess  string `json:"group_access"`
 		Password     string `json:"password" binding:"required,min=6"`
 		Role         string `json:"role"`
 	}
@@ -100,7 +101,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	u, err := h.repo.Create(c.Request.Context(), req.Name, req.Username, req.Email, req.Whatsapp, req.ProfileImage, string(hash), req.Role)
+	u, err := h.repo.Create(c.Request.Context(), req.Name, req.Username, req.Email, req.Whatsapp, req.ProfileImage, req.GroupAccess, string(hash), req.Role)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique_violation
@@ -129,6 +130,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		Email        string `json:"email" binding:"required,email"`
 		Whatsapp     string `json:"whatsapp"`
 		ProfileImage string `json:"profile_image"`
+		GroupAccess  string `json:"group_access"`
 		Password     string `json:"password"`
 		Role         string `json:"role"`
 	}
@@ -144,7 +146,7 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	u, err := h.repo.Update(c.Request.Context(), id, req.Name, req.Email, req.Whatsapp, req.ProfileImage, req.Role)
+	u, err := h.repo.Update(c.Request.Context(), id, req.Name, req.Email, req.Whatsapp, req.ProfileImage, req.GroupAccess, req.Role)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // email unik
