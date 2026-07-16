@@ -3,7 +3,8 @@
   const { collapsed, toggle } = useSidebar()
   const { isAdmin } = useAuth()
 
-  const menuGroups = computed(() => [
+  // Menu utama (atas).
+  const topGroups = [
     {
       label: '',
       items: [
@@ -16,22 +17,59 @@
         { label: 'Ping (sample slice)', icon: 'i-lucide-radio', to: '/ping' },
       ],
     },
-    // Administration menu only shows for admins.
-    ...(isAdmin.value
-      ? [{
-          label: 'Administration',
-          items: [
-            { label: 'Users', icon: 'i-lucide-users', to: '/users' },
-          ],
-        }]
-      : []),
-  ])
+  ]
+
+  // Isi submenu Settings (tampil di popover di atas tombol Settings).
+  const settingsItems = [
+    { label: 'Internal Users', icon: 'i-lucide-users', to: '/users' },
+  ]
+  const isSettingsActive = computed(() => settingsItems.some(i => i.to === route.path))
+
+  // ── Popover Settings ──
+  const btnRef = ref<HTMLElement>()
+  const popRef = ref<HTMLElement>()
+  const settingsOpen = ref(false)
+  const popStyle = ref<Record<string, string>>({})
+
+  function openSettings() {
+    const el = btnRef.value
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    popStyle.value = {
+      left: `${r.left}px`,
+      bottom: `${window.innerHeight - r.top + 8}px`,
+      minWidth: `${Math.max(r.width, 210)}px`,
+    }
+    settingsOpen.value = true
+  }
+  function toggleSettings() {
+    if (settingsOpen.value) settingsOpen.value = false
+    else openSettings()
+  }
+
+  function onDocClick(e: MouseEvent) {
+    const t = e.target as Node
+    if (btnRef.value?.contains(t) || popRef.value?.contains(t)) return
+    settingsOpen.value = false
+  }
+  function onKey(e: KeyboardEvent) {
+    if (e.key === 'Escape') settingsOpen.value = false
+  }
+  onMounted(() => {
+    document.addEventListener('click', onDocClick)
+    window.addEventListener('keydown', onKey)
+  })
+  onUnmounted(() => {
+    document.removeEventListener('click', onDocClick)
+    window.removeEventListener('keydown', onKey)
+  })
 </script>
 
 <template>
   <aside class="app-sidebar" :class="{ collapsed }">
+    <!-- ── Menu utama ── -->
     <nav class="sidebar-nav">
-      <div v-for="(group, gi) in menuGroups" :key="gi" class="nav-group">
+      <div v-for="(group, gi) in topGroups" :key="gi" class="nav-group">
         <span v-if="!collapsed && group.label" class="nav-section">{{ group.label }}</span>
         <div v-else-if="collapsed && gi > 0" class="nav-divider" />
         <NuxtLink
@@ -48,10 +86,48 @@
       </div>
     </nav>
 
+    <!-- ── Settings (buka popover di atasnya) ── -->
+    <div v-if="isAdmin" class="sidebar-settings">
+      <button
+        ref="btnRef"
+        class="sidebar-item settings-toggle"
+        :class="{ active: isSettingsActive || settingsOpen }"
+        :title="collapsed ? 'Settings' : undefined"
+        @click="toggleSettings"
+      >
+        <UIcon name="i-lucide-settings" class="sidebar-icon" />
+        <template v-if="!collapsed">
+          <span class="sidebar-label">Settings</span>
+          <UIcon name="i-lucide-chevron-up" class="settings-caret" :class="{ flip: settingsOpen }" />
+        </template>
+      </button>
+    </div>
+
+    <!-- ── Collapse toggle ── -->
     <button class="collapse-btn" :title="collapsed ? 'Expand' : 'Collapse'" @click="toggle">
       <UIcon :name="collapsed ? 'i-lucide-chevrons-right' : 'i-lucide-chevrons-left'" class="text-[18px]" />
       <span v-if="!collapsed" class="sidebar-label">Collapse</span>
     </button>
+
+    <!-- ── Popover (melayang di atas tombol Settings) ── -->
+    <Teleport to="body">
+      <Transition name="pop">
+        <div v-if="settingsOpen" ref="popRef" class="settings-popover" :style="popStyle">
+          <span class="settings-popover-title">Settings</span>
+          <NuxtLink
+            v-for="it in settingsItems"
+            :key="it.to"
+            :to="it.to"
+            class="settings-pop-item"
+            :class="{ active: route.path === it.to }"
+            @click="settingsOpen = false"
+          >
+            <UIcon :name="it.icon" class="settings-pop-icon" />
+            <span>{{ it.label }}</span>
+          </NuxtLink>
+        </div>
+      </Transition>
+    </Teleport>
   </aside>
 </template>
 
@@ -134,6 +210,30 @@
     line-height: 1;
   }
 
+  /* ── Settings section (bottom) ── */
+  .sidebar-settings {
+    padding: 8px;
+    border-top: 1px solid var(--border-color);
+    flex-shrink: 0;
+  }
+  .settings-toggle {
+    width: 100%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .settings-caret {
+    margin-left: auto;
+    font-size: 15px;
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+  }
+  .settings-caret.flip {
+    transform: rotate(180deg);
+  }
+
+  /* ── Collapse toggle ── */
   .collapse-btn {
     display: flex;
     align-items: center;
@@ -155,5 +255,75 @@
   .collapse-btn:hover {
     color: var(--accent);
     background-color: var(--bg-hover);
+  }
+
+  /* ── Settings popover (floating above the button) ── */
+  .settings-popover {
+    position: fixed;
+    z-index: 200;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  /* caret pointing down to the Settings button */
+  .settings-popover::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 20px;
+    width: 11px;
+    height: 11px;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    transform: rotate(45deg);
+  }
+  .settings-popover-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    padding: 6px 10px 4px;
+  }
+  .settings-pop-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  .settings-pop-item:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+  }
+  .settings-pop-item.active {
+    background-color: var(--accent-light);
+    color: var(--accent);
+  }
+  .settings-pop-icon {
+    font-size: 17px;
+    flex-shrink: 0;
+  }
+
+  .pop-enter-active,
+  .pop-leave-active {
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .pop-enter-from,
+  .pop-leave-to {
+    opacity: 0;
+    transform: translateY(6px);
   }
 </style>

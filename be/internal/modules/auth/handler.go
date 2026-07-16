@@ -3,7 +3,7 @@ package auth
 import (
 	"errors"
 	"net/http"
-	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -57,7 +57,7 @@ func (h *Handler) Login(c *gin.Context) {
 // ─── Current user ───
 
 func (h *Handler) Me(c *gin.Context) {
-	uid := c.GetInt(middleware.CtxUserID)
+	uid := c.GetString(middleware.CtxUserID)
 	u, err := h.repo.GetByID(c.Request.Context(), uid)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user tidak ditemukan"})
@@ -82,6 +82,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		Name     string `json:"name" binding:"required"`
 		Username string `json:"username" binding:"required"`
 		Email    string `json:"email" binding:"required,email"`
+		Whatsapp string `json:"whatsapp"`
 		Password string `json:"password" binding:"required,min=6"`
 		Role     string `json:"role"`
 	}
@@ -99,11 +100,18 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	u, err := h.repo.Create(c.Request.Context(), req.Name, req.Username, req.Email, string(hash), req.Role)
+	u, err := h.repo.Create(c.Request.Context(), req.Name, req.Username, req.Email, req.Whatsapp, string(hash), req.Role)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique_violation
-			c.JSON(http.StatusConflict, gin.H{"error": "username or email already taken"})
+			switch {
+			case strings.Contains(pgErr.ConstraintName, "username"):
+				c.JSON(http.StatusConflict, gin.H{"error": "Username already taken", "field": "username"})
+			case strings.Contains(pgErr.ConstraintName, "email"):
+				c.JSON(http.StatusConflict, gin.H{"error": "Email already taken", "field": "email"})
+			default:
+				c.JSON(http.StatusConflict, gin.H{"error": "Username or email already taken"})
+			}
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -113,11 +121,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 }
 
 func (h *Handler) ToggleUserActive(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "id tidak valid"})
-		return
-	}
+	id := c.Param("id") // UUID
 	var req struct {
 		IsActive bool `json:"is_active"`
 	}

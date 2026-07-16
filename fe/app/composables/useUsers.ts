@@ -1,8 +1,9 @@
 export interface ManagedUser {
-  id: number
+  id: string
   name: string
   username: string
   email: string
+  whatsapp: string
   role: string
   is_active: boolean
   created_at: string
@@ -23,15 +24,11 @@ export function useUsers() {
     }
   }
 
-  const createUser = async (body: { name: string; username: string; email: string; password: string; role: string }) => {
-    try {
-      await apiFetch('/api/v1/users', { method: 'POST', body })
-      await fetchUsers()
-      toast.add({ title: 'Saved', description: 'New user created', color: 'success' })
-    } catch (e: any) {
-      toast.add({ title: 'Failed', description: e?.data?.error || 'Could not create user', color: 'error' })
-      throw e
-    }
+  const createUser = async (body: { name: string; username: string; email: string; whatsapp: string; password: string; role: string }) => {
+    // Error dilempar ke pemanggil (users.vue) supaya bisa ditampilkan inline per-field.
+    await apiFetch('/api/v1/users', { method: 'POST', body })
+    await fetchUsers()
+    toast.add({ title: 'Saved', description: 'New user created', color: 'success' })
   }
 
   const toggleActive = async (u: ManagedUser) => {

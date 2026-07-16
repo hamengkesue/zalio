@@ -27,7 +27,7 @@ docker compose ps
 ```bash
 cd /Users/user/myProject/zalio_erp_project/zalio_erp
 docker exec -i zalio-erp-db psql -U zalio_erp -d zalio_erp < be/migrations/001_init.sql
-docker exec -i zalio-erp-db psql -U zalio_erp -d zalio_erp < be/migrations/002_auth.sql
+docker exec -i zalio-erp-db psql -U zalio_erp -d zalio_erp < be/migrations/002_internal_user.sql
 ```
 
 ## Langkah 3 — Jalankan backend (Terminal #1)

@@ -6,9 +6,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// Claims adalah isi token: siapa user-nya (UserID) dan perannya (Role).
+// Claims adalah isi token: siapa user-nya (UserID = UUID) dan perannya (Role).
 type Claims struct {
-	UserID int    `json:"uid"`
+	UserID string `json:"uid"`
 	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
@@ -24,7 +24,7 @@ func NewManager(secret string) *Manager {
 }
 
 // Generate membuat token untuk user yang berhasil login.
-func (m *Manager) Generate(userID int, role string) (string, error) {
+func (m *Manager) Generate(userID string, role string) (string, error) {
 	now := time.Now()
 	claims := Claims{
 		UserID: userID,

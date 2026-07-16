@@ -180,16 +180,36 @@ body {
 }
 .text-input {
   flex: 1;
-  padding: 10px 14px;
+  width: 100%;
+  padding: 12px 15px;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 14px;
   color: var(--text-primary);
   background-color: var(--bg-surface);
   outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.text-input::placeholder {
+  color: var(--text-muted);
 }
 .text-input:focus {
   border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(0, 112, 242, 0.1);
+}
+
+/* ── Form label ── */
+.form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.req {
+  color: var(--danger);
+  margin-left: 2px;
+  font-weight: 700;
 }
 .btn-primary {
   padding: 10px 20px;
