@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -68,12 +69,50 @@ func (h *Handler) Me(c *gin.Context) {
 // ─── User management (admin only) ───
 
 func (h *Handler) ListUsers(c *gin.Context) {
-	items, err := h.repo.List(c.Request.Context())
+	limit := atoiDefault(c.Query("limit"), 8)
+	offset := atoiDefault(c.Query("offset"), 0)
+	if limit < 1 || limit > 100 {
+		limit = 8
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	// Filter role & status (di-whitelist; nilai lain diabaikan → tanpa filter).
+	role := c.Query("role")
+	if role != "admin" && role != "staff" {
+		role = ""
+	}
+	status := c.Query("status")
+	if status != "active" && status != "inactive" {
+		status = ""
+	}
+
+	items, total, err := h.repo.ListPaged(c.Request.Context(), ListParams{
+		Limit:  limit,
+		Offset: offset,
+		Search: c.Query("search"),
+		Sort:   c.Query("sort"),
+		Desc:   c.Query("desc") == "true",
+		Role:   role,
+		Status: status,
+	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": items})
+	c.JSON(http.StatusOK, gin.H{"data": items, "total": total})
+}
+
+// atoiDefault mengubah string query jadi int; kalau kosong/invalid pakai def.
+func atoiDefault(s string, def int) int {
+	if s == "" {
+		return def
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return def
+	}
+	return n
 }
 
 func (h *Handler) CreateUser(c *gin.Context) {
