@@ -7,16 +7,26 @@
   const password = ref('')
   const showPassword = ref(false)
   const loading = ref(false)
-  const error = ref('')
+  const errors = reactive({ username: '', password: '' })
+
+  function validate() {
+    errors.username = username.value.trim() ? '' : 'required'
+    errors.password = password.value ? '' : 'required'
+    return !errors.username && !errors.password
+  }
 
   async function submit() {
-    error.value = ''
+    if (!validate()) return
     loading.value = true
     try {
       await login(username.value, password.value)
       await navigateTo('/')
     } catch (e: any) {
-      error.value = e?.data?.error || 'Sign in failed. Check your username and password.'
+      const field = e?.data?.field
+      const msg = e?.data?.error || 'Sign in failed'
+      if (field === 'username') errors.username = msg
+      else if (field === 'password') errors.password = msg
+      else { errors.username = msg; errors.password = msg }
     } finally {
       loading.value = false
     }
@@ -44,26 +54,37 @@
         <h1 class="login-title">Welcome back</h1>
         <p class="login-sub">Sign into your Zalio Account</p>
 
-        <label class="field-label">USERNAME</label>
+        <label class="field-label">
+          USERNAME
+          <span v-if="errors.username === 'required'" class="login-required">Required</span>
+        </label>
         <div class="input-group">
           <UIcon name="i-lucide-user" class="input-icon" />
           <input
             v-model="username"
             class="field-input"
+            :class="{ 'field-input--err': errors.username }"
             placeholder="Enter your username"
             autocomplete="username"
+            @input="errors.username = ''"
           >
+          <div v-if="errors.username && errors.username !== 'required'" class="login-tip">{{ errors.username }}</div>
         </div>
 
-        <label class="field-label">PASSWORD</label>
+        <label class="field-label">
+          PASSWORD
+          <span v-if="errors.password === 'required'" class="login-required">Required</span>
+        </label>
         <div class="input-group">
           <UIcon name="i-lucide-lock" class="input-icon" />
           <input
             v-model="password"
             :type="showPassword ? 'text' : 'password'"
             class="field-input"
+            :class="{ 'field-input--err': errors.password }"
             placeholder="Enter your password"
             autocomplete="current-password"
+            @input="errors.password = ''"
           >
           <button
             type="button"
@@ -73,9 +94,8 @@
           >
             <UIcon :name="showPassword ? 'i-lucide-eye' : 'i-lucide-eye-off'" />
           </button>
+          <div v-if="errors.password && errors.password !== 'required'" class="login-tip">{{ errors.password }}</div>
         </div>
-
-        <p v-if="error" class="login-error">{{ error }}</p>
 
         <button class="signin-btn" :disabled="loading" type="submit">
           {{ loading ? 'Signing in...' : 'Sign In' }}
@@ -216,6 +236,16 @@
     border-color: #0070f2;
     box-shadow: 0 0 0 3px rgba(0, 112, 242, 0.12);
   }
+  .field-input--err {
+    border-color: #dc2626 !important;
+  }
+  .login-required {
+    margin-left: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0;
+    color: #dc2626;
+  }
   .input-eye {
     position: absolute;
     right: 12px;
@@ -249,14 +279,30 @@
     opacity: 0.6;
     cursor: default;
   }
-  .login-error {
-    margin-top: 16px;
-    padding: 10px 12px;
-    border-radius: 8px;
-    background: #fee2e2;
-    color: #dc2626;
-    font-size: 13px;
+  /* Tooltip error autentikasi: melayang di bawah field password. */
+  .login-tip {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 20;
+    max-width: 100%;
+    background: #dc2626;
+    color: #fff;
+    font-size: 12px;
     font-weight: 600;
+    line-height: 1.35;
+    padding: 8px 12px;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+    pointer-events: none;
+  }
+  .login-tip::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 18px;
+    border: 5px solid transparent;
+    border-bottom-color: #dc2626;
   }
   .login-footer {
     text-align: center;

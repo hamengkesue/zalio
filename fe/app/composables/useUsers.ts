@@ -32,6 +32,12 @@ export function useUsers() {
     toast.add({ title: 'Saved', description: 'New user created', color: 'success' })
   }
 
+  const updateUser = async (id: string, body: { name: string; email: string; whatsapp: string; profile_image: string; password: string; role: string }) => {
+    await apiFetch(`/api/v1/users/${id}`, { method: 'PUT', body })
+    await fetchUsers()
+    toast.add({ title: 'Saved', description: 'User updated', color: 'success' })
+  }
+
   // Upload gambar profil → MinIO; kembalikan path yang disimpan.
   const uploadProfileImage = async (file: File): Promise<string> => {
     const fd = new FormData()
@@ -58,5 +64,5 @@ export function useUsers() {
     }
   }
 
-  return { users, fetchUsers, createUser, uploadProfileImage, toggleActive }
+  return { users, fetchUsers, createUser, updateUser, uploadProfileImage, toggleActive }
 }

@@ -197,6 +197,11 @@ body {
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px rgba(0, 112, 242, 0.1);
 }
+.text-input:disabled {
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
 
 /* ── Form label ── */
 .form-label {
@@ -277,6 +282,9 @@ body {
 /* setiap baris punya garis batas bawah (termasuk baris terakhir) */
 .data-table tbody tr:hover {
   background-color: var(--bg-row-hover);
+}
+.data-table tbody tr.clickable {
+  cursor: pointer;
 }
 .data-table .text-right { text-align: right; }
 .data-table .text-center { text-align: center; }

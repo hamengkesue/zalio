@@ -1,7 +1,8 @@
 <script setup lang="ts">
   useHead({ title: 'Zalio ERP — Internal Users' })
 
-  const { users, fetchUsers, createUser, uploadProfileImage, toggleActive } = useUsers()
+  const { users, fetchUsers, createUser, updateUser, uploadProfileImage, toggleActive } = useUsers()
+  const { isAdmin } = useAuth()
   const toast = useToast()
 
   // ── search / sort / pagination ──
@@ -44,8 +45,10 @@
 
   // ── create form ──
   const showForm = ref(false)
+  const editingId = ref<string | null>(null)
   const saving = ref(false)
   const showPassword = ref(false)
+  const passwordEditing = ref(false) // hanya relevan di mode edit
   const form = reactive({ name: '', username: '', email: '', whatsapp: '', profile_image: '', password: '', role: 'staff' })
   const errors = reactive({ name: '', username: '', email: '', whatsapp: '', password: '' })
   const imgError = reactive<Record<string, boolean>>({})
@@ -98,10 +101,34 @@
     errors.whatsapp = ''
     errors.password = ''
     showPassword.value = false
+    passwordEditing.value = false
+    editingId.value = null
+  }
+
+  // Toggle "edit"/"cancel" ganti password (mode edit).
+  function togglePasswordEdit() {
+    passwordEditing.value = !passwordEditing.value
+    form.password = ''
+    errors.password = ''
+    showPassword.value = false
   }
 
   function openForm() {
     resetForm()
+    showForm.value = true
+  }
+
+  // Klik baris → buka modal edit, form terisi data user.
+  function openEdit(u: ManagedUser) {
+    resetForm()
+    editingId.value = u.id
+    form.name = u.name
+    form.username = u.username
+    form.email = u.email
+    form.whatsapp = u.whatsapp
+    form.profile_image = u.profile_image
+    form.role = u.role
+    form.password = ''
     showForm.value = true
   }
 
@@ -130,9 +157,15 @@
     errors.whatsapp = !wa
       ? 'required'
       : (phoneRe.test(wa) ? '' : 'Use a phone number with country code, e.g. +6281234567890')
-    errors.password = !form.password
-      ? 'required'
-      : (form.password.length >= 6 ? '' : 'Use at least 6 characters')
+    // Password wajib saat create, atau saat sedang mengganti password di mode edit.
+    // Kalau edit tanpa klik "edit", password lama dipertahankan (tak divalidasi).
+    if (!editingId.value || passwordEditing.value) {
+      errors.password = !form.password
+        ? 'required'
+        : (form.password.length >= 6 ? '' : 'Use at least 6 characters')
+    } else {
+      errors.password = ''
+    }
     return !errors.name && !errors.username && !errors.email && !errors.whatsapp && !errors.password
   }
 
@@ -154,7 +187,9 @@
     if (!validate()) return
     saving.value = true
     try {
-      await createUser({ ...form, whatsapp: form.whatsapp.replace(/[\s-]/g, '') })
+      const body = { ...form, whatsapp: form.whatsapp.replace(/[\s-]/g, '') }
+      if (editingId.value) await updateUser(editingId.value, body)
+      else await createUser(body)
       resetForm()
       showForm.value = false
     } catch (e: any) {
@@ -193,7 +228,7 @@
         </button>
       </div>
 
-      <AppModal v-model="showForm" title="New Internal User" :hide-close="true">
+      <AppModal v-model="showForm" :title="editingId ? 'Edit Internal User' : 'New Internal User'" :hide-close="true">
         <form class="modal-form" @submit.prevent="submit">
           <div class="user-form-grid">
             <div class="span-2">
@@ -221,23 +256,38 @@
                 class="text-input"
                 :class="{ 'input-error': errors.username }"
                 placeholder="e.g. johndoe"
+                :disabled="!!editingId"
                 @input="stripSpaces(); errors.username = ''"
               >
               <div v-if="errors.username && errors.username !== 'required'" class="field-tip">{{ errors.username }}</div>
             </div>
 
             <div>
-              <label class="form-label">
-                Password <span class="req">*</span>
-                <span v-if="errors.password === 'required'" class="label-required">Required</span>
-              </label>
-              <div class="input-with-icon">
+              <div class="pw-head">
+                <label class="form-label pw-head-label">
+                  Password <span v-if="!editingId" class="req">*</span>
+                  <span v-if="errors.password === 'required'" class="label-required">Required</span>
+                </label>
+                <button v-if="editingId" type="button" class="pw-edit-btn" @click="togglePasswordEdit">
+                  {{ passwordEditing ? 'cancel' : 'edit' }}
+                </button>
+              </div>
+              <!-- Edit mode & belum klik "edit": password lama disamarkan & terkunci. -->
+              <input
+                v-if="editingId && !passwordEditing"
+                class="text-input"
+                type="password"
+                value="passwordmask1"
+                disabled
+              >
+              <!-- Create, atau sedang mengganti password: field bisa diisi. -->
+              <div v-else class="input-with-icon">
                 <input
                   v-model="form.password"
                   :type="showPassword ? 'text' : 'password'"
                   class="text-input"
                   :class="{ 'input-error': errors.password }"
-                  placeholder="min. 6 characters"
+                  :placeholder="editingId ? 'Enter new password' : 'min. 6 characters'"
                   @input="errors.password = ''"
                   @blur="validatePasswordField"
                 >
@@ -306,7 +356,7 @@
 
             <div>
               <label class="form-label">Role</label>
-              <select v-model="form.role" class="text-input">
+              <select v-model="form.role" class="text-input" :disabled="!isAdmin">
                 <option value="staff">staff</option>
                 <option value="admin">admin</option>
               </select>
@@ -336,7 +386,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="u in paged" :key="u.id">
+              <tr v-for="u in paged" :key="u.id" class="clickable" @click="openEdit(u)">
                 <td class="text-center">
                   <img
                     v-if="u.profile_image && !imgError[u.id]"
@@ -356,7 +406,7 @@
                     class="toggle"
                     :class="{ on: u.is_active }"
                     :title="u.is_active ? 'Active — click to deactivate' : 'Inactive — click to activate'"
-                    @click="toggleActive(u)"
+                    @click.stop="toggleActive(u)"
                   >
                     <span class="toggle-knob" />
                   </button>
@@ -450,6 +500,26 @@
     font-size: 12px;
     font-weight: 700;
     margin-left: 8px;
+  }
+  .pw-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .pw-head-label {
+    margin-bottom: 0;
+  }
+  .pw-edit-btn {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  .pw-edit-btn:hover {
+    text-decoration: underline;
   }
 
   .modal-actions {

@@ -70,6 +70,22 @@ func (r *Repo) Create(ctx context.Context, name, username, email, whatsapp, prof
 		name, username, email, whatsapp, profileImage, passwordHash, role))
 }
 
+// Update mengubah data user (username tidak diubah). modified_at diurus trigger.
+func (r *Repo) Update(ctx context.Context, id, name, email, whatsapp, profileImage, role string) (*User, error) {
+	return scanUser(r.pool.QueryRow(ctx,
+		`UPDATE m_internal_user
+		 SET full_name = $1, email = $2, whatsapp_number = $3, profile_image = $4, role = $5
+		 WHERE id = $6::uuid
+		 RETURNING `+userCols,
+		name, email, whatsapp, profileImage, role, id))
+}
+
+func (r *Repo) UpdatePassword(ctx context.Context, id, passwordHash string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE m_internal_user SET password_hash = $1 WHERE id = $2::uuid`, passwordHash, id)
+	return err
+}
+
 func (r *Repo) ToggleActive(ctx context.Context, id string, isActive bool) (*User, error) {
 	// modified_at diurus oleh trigger update_modified_at_column.
 	return scanUser(r.pool.QueryRow(ctx,

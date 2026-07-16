@@ -23,5 +23,6 @@ func Register(public, protected *gin.RouterGroup, pool *pgxpool.Pool, tm *token.
 	admin.Use(middleware.RequireRole("admin"))
 	admin.GET("/users", h.ListUsers)
 	admin.POST("/users", h.CreateUser)
+	admin.PUT("/users/:id", h.UpdateUser)
 	admin.PATCH("/users/:id/toggle-active", h.ToggleUserActive)
 }

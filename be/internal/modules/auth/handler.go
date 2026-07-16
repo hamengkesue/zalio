@@ -32,16 +32,15 @@ func (h *Handler) Login(c *gin.Context) {
 
 	cr, err := h.repo.GetCredentialsByUsername(c.Request.Context(), req.Username)
 	if err != nil {
-		// username tidak ditemukan — pesan disamakan agar tidak membocorkan info
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid username or password"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username", "field": "username"})
 		return
 	}
 	if !cr.IsActive {
-		c.JSON(http.StatusForbidden, gin.H{"error": "account is disabled"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Account is disabled", "field": "username"})
 		return
 	}
 	if bcrypt.CompareHashAndPassword([]byte(cr.PasswordHash), []byte(req.Password)) != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid username or password"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password", "field": "password"})
 		return
 	}
 
@@ -119,6 +118,56 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"data": u})
+}
+
+// UpdateUser mengubah data user. Password opsional (kosong = tidak diubah).
+// Username tidak bisa diubah.
+func (h *Handler) UpdateUser(c *gin.Context) {
+	id := c.Param("id") // UUID
+	var req struct {
+		Name         string `json:"name" binding:"required"`
+		Email        string `json:"email" binding:"required,email"`
+		Whatsapp     string `json:"whatsapp"`
+		ProfileImage string `json:"profile_image"`
+		Password     string `json:"password"`
+		Role         string `json:"role"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.Role != "admin" && req.Role != "staff" {
+		req.Role = "staff"
+	}
+	if req.Password != "" && len(req.Password) < 6 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password must be at least 6 characters"})
+		return
+	}
+
+	u, err := h.repo.Update(c.Request.Context(), id, req.Name, req.Email, req.Whatsapp, req.ProfileImage, req.Role)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // email unik
+			c.JSON(http.StatusConflict, gin.H{"error": "Email already taken", "field": "email"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.Password != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if err := h.repo.UpdatePassword(c.Request.Context(), id, string(hash)); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": u})
 }
 
 func (h *Handler) ToggleUserActive(c *gin.Context) {

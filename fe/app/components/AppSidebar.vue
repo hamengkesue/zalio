@@ -21,7 +21,7 @@
 
   // Isi submenu Settings (tampil di popover di atas tombol Settings).
   const settingsItems = [
-    { label: 'Internal Users', icon: 'i-lucide-users', to: '/users' },
+    { label: 'Internal Users', icon: 'i-lucide-users', to: '/settings/internal-users' },
   ]
   const isSettingsActive = computed(() => settingsItems.some(i => i.to === route.path))
 
