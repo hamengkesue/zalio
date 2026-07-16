@@ -335,6 +335,10 @@ body {
   opacity: 0.4;
   cursor: default;
 }
+/* Mode indikator (infinite scroll): badge halaman tak bisa diklik. */
+.pager-btns--readonly .pager-btn {
+  pointer-events: none;
+}
 
 /* ── Badges ── */
 .badge {

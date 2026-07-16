@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  const props = withDefaults(defineProps<{ total: number; pageSize?: number }>(), { pageSize: 9999 })
+  const props = withDefaults(defineProps<{ total: number; pageSize?: number; readonly?: boolean }>(), { pageSize: 9999, readonly: false })
   const page = defineModel<number>('page', { default: 1 })
 
   const totalPages = computed(() => Math.max(1, Math.ceil(props.total / props.pageSize)))
@@ -20,6 +20,7 @@
   })
 
   function go(p: number) {
+    if (props.readonly) return // mode indikator: navigasi lewat scroll, bukan klik
     if (p >= 1 && p <= totalPages.value) page.value = p
   }
 </script>
@@ -27,12 +28,12 @@
 <template>
   <div class="table-pager">
     <span class="pager-info">Showing {{ from }}-{{ to }} of {{ total }} item{{ total === 1 ? '' : 's' }}</span>
-    <div class="pager-btns">
-      <button class="pager-btn" :disabled="page <= 1" @click="go(1)"><UIcon name="i-lucide-chevrons-left" /></button>
-      <button class="pager-btn" :disabled="page <= 1" @click="go(page - 1)"><UIcon name="i-lucide-chevron-left" /></button>
+    <div class="pager-btns" :class="{ 'pager-btns--readonly': readonly }">
+      <button v-if="!readonly" class="pager-btn" :disabled="page <= 1" @click="go(1)"><UIcon name="i-lucide-chevrons-left" /></button>
+      <button v-if="!readonly" class="pager-btn" :disabled="page <= 1" @click="go(page - 1)"><UIcon name="i-lucide-chevron-left" /></button>
       <button v-for="p in pages" :key="p" class="pager-btn" :class="{ active: p === page }" @click="go(p)">{{ p }}</button>
-      <button class="pager-btn" :disabled="page >= totalPages" @click="go(page + 1)"><UIcon name="i-lucide-chevron-right" /></button>
-      <button class="pager-btn" :disabled="page >= totalPages" @click="go(totalPages)"><UIcon name="i-lucide-chevrons-right" /></button>
+      <button v-if="!readonly" class="pager-btn" :disabled="page >= totalPages" @click="go(page + 1)"><UIcon name="i-lucide-chevron-right" /></button>
+      <button v-if="!readonly" class="pager-btn" :disabled="page >= totalPages" @click="go(totalPages)"><UIcon name="i-lucide-chevrons-right" /></button>
     </div>
   </div>
 </template>

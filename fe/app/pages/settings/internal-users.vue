@@ -1,47 +1,127 @@
 <script setup lang="ts">
   useHead({ title: 'Zalio ERP — Internal Users' })
 
-  const { users, fetchUsers, createUser, updateUser, uploadProfileImage, toggleActive } = useUsers()
+  const { users, total, fetchPage, createUser, updateUser, uploadProfileImage, toggleActive } = useUsers()
   const { isAdmin } = useAuth()
   const toast = useToast()
 
-  // ── search / sort / pagination ──
+  // ── search / sort / infinite-scroll pagination (server-side) ──
   const search = ref('')
   const sortField = ref('')
   const sortDesc = ref(false)
-  const page = ref(1)
   const pageSize = 8
+  const currentPage = ref(1)          // halaman yang sedang tampak (indikator, dari posisi scroll)
+  const loading = ref(false)          // sedang fetch batch
+  const scrollEl = ref<HTMLElement>() // ref ke .table-scroll
   const sortOptions = [
     { label: 'Name', value: 'name' },
     { label: 'Username', value: 'username' },
     { label: 'Role', value: 'role' },
   ]
 
-  const filtered = computed(() => {
-    let list = users.value
-    if (search.value.trim()) {
-      const q = search.value.toLowerCase()
-      list = list.filter(u =>
-        u.name.toLowerCase().includes(q)
-        || u.username.toLowerCase().includes(q)
-        || u.email.toLowerCase().includes(q))
+  // ── filter (Role & Status) ──
+  const DEFAULT_STATUS = 'active' // default tabel: hanya user Active
+  const filterRole = ref('')                // ''=All, 'admin', 'staff'
+  const filterStatus = ref(DEFAULT_STATUS)  // ''=All, 'active', 'inactive'
+  const showFilter = ref(false)
+  // true kalau filter menyimpang dari default → tampilkan titik indikator di tombol.
+  const filterActive = computed(() => filterRole.value !== '' || filterStatus.value !== DEFAULT_STATUS)
+
+  function resetFilter() {
+    filterRole.value = ''
+    filterStatus.value = DEFAULT_STATUS
+  }
+
+  // Param query yang dipakai bersama loadMore & reload (search + sort + filter).
+  function baseQuery() {
+    return {
+      search: search.value.trim(),
+      sort: sortField.value,
+      desc: sortDesc.value,
+      role: filterRole.value,
+      status: filterStatus.value,
     }
-    if (sortField.value) {
-      const k = sortField.value
-      list = [...list].sort((a, b) => {
-        const cmp = String((a as any)[k]).localeCompare(String((b as any)[k]))
-        return sortDesc.value ? -cmp : cmp
+  }
+
+  const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize)))
+  const ROW_H = 64 // tinggi baris; samakan dengan .data-table tbody tr di main.css
+
+  // Ambil batch berikutnya lalu tambahkan ke bawah (inti infinite scroll).
+  async function loadMore() {
+    if (loading.value || users.value.length >= total.value) return
+    loading.value = true
+    try {
+      await fetchPage({
+        offset: users.value.length,
+        limit: pageSize,
+        ...baseQuery(),
+        append: true,
       })
+    } finally {
+      loading.value = false
     }
-    return list
-  })
+    await fillViewport()
+  }
 
-  const paged = computed(() => {
-    const start = (page.value - 1) * pageSize
-    return filtered.value.slice(start, start + pageSize)
-  })
+  // Reset daftar & ambil batch pertama (saat mount, ganti search/sort, atau sesudah simpan).
+  async function reload() {
+    loading.value = true
+    users.value = []
+    currentPage.value = 1
+    try {
+      await fetchPage({
+        offset: 0,
+        limit: pageSize,
+        ...baseQuery(),
+        append: false,
+      })
+    } finally {
+      loading.value = false
+    }
+    if (scrollEl.value) scrollEl.value.scrollTop = 0
+    await fillViewport()
+  }
 
-  watch([search, sortField, sortDesc], () => { page.value = 1 })
+  // Kalau konten belum memenuhi tinggi container (belum ada scrollbar) padahal
+  // data masih ada, ambil lagi supaya user bisa mulai men-scroll.
+  async function fillViewport() {
+    await nextTick()
+    const el = scrollEl.value
+    if (el && el.scrollHeight <= el.clientHeight + 4 && users.value.length < total.value && !loading.value) {
+      await loadMore()
+    }
+  }
+
+  // Scroll: (1) fetch saat mendekati bawah, (2) update badge halaman dari posisi scroll.
+  function onScroll() {
+    const el = scrollEl.value
+    if (!el) return
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 240) loadMore()
+    updateCurrentPage(el)
+  }
+
+  // Badge halaman dari posisi scroll. Dihitung dari baris di TENGAH viewport supaya
+  // row-aware; lalu dijamin: paling atas = halaman 1, paling bawah = halaman terakhir
+  // (kalau pakai baris teratas, halaman terakhir tak pernah tercapai saat viewport
+  // lebih tinggi dari satu halaman).
+  function updateCurrentPage(el: HTMLElement) {
+    const tp = totalPages.value
+    if (el.scrollTop <= 2) { currentPage.value = 1; return }
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 2) { currentPage.value = tp; return }
+    const headerH = el.querySelector('thead')?.clientHeight ?? 0
+    const centerRow = Math.floor((el.scrollTop + el.clientHeight / 2 - headerH) / ROW_H)
+    currentPage.value = Math.min(tp, Math.max(1, Math.floor(Math.max(0, centerRow) / pageSize) + 1))
+  }
+
+  // Ganti search/sort → reset dari batch pertama. Search di-debounce 300ms.
+  let searchTimer: ReturnType<typeof setTimeout> | undefined
+  watch(search, () => {
+    clearTimeout(searchTimer)
+    searchTimer = setTimeout(reload, 300)
+  })
+  watch([sortField, sortDesc], reload)
+  // Filter live: begitu Role/Status berubah, reset & muat ulang dari server.
+  watch([filterRole, filterStatus], reload)
 
   // ── create form ──
   const showForm = ref(false)
@@ -90,7 +170,7 @@
     }
   }
 
-  onMounted(fetchUsers)
+  onMounted(reload)
 
   function resetForm() {
     form.name = ''
@@ -161,8 +241,9 @@
       ? 'required'
       : (emailRe.test(form.email.trim()) ? '' : 'Invalid email address')
     const wa = form.whatsapp.replace(/[\s-]/g, '')
+    // WhatsApp opsional: kosong = valid; kalau diisi harus format E.164.
     errors.whatsapp = !wa
-      ? 'required'
+      ? ''
       : (phoneRe.test(wa) ? '' : 'Use a phone number with country code, e.g. +6281234567890')
     // Password wajib saat create, atau saat sedang mengganti password di mode edit.
     // Kalau edit tanpa klik "edit", password lama dipertahankan (tak divalidasi).
@@ -199,6 +280,7 @@
       else await createUser(body)
       resetForm()
       showForm.value = false
+      await reload() // muat ulang daftar dari batch pertama (server-side)
     } catch (e: any) {
       const field = e?.data?.field
       const msg = e?.data?.error
@@ -219,21 +301,59 @@
     <div class="page-body">
       <div class="page-header">
         <h1 class="page-title">Internal Users</h1>
-        <p class="page-subtitle">Manage internal back-office users &amp; their access.</p>
+        <!-- Breadcrumbs: teks saja (tidak bisa diklik) -->
+        <p class="breadcrumbs">
+          <span>Settings</span>
+          <span class="crumb-sep">›</span>
+          <span>Internal Users</span>
+        </p>
       </div>
 
       <div class="toolbar">
-        <SearchSort
-          v-model="search"
-          v-model:sort="sortField"
-          v-model:desc="sortDesc"
-          :sort-options="sortOptions"
-          placeholder="Search name, username, email..."
-        />
+        <div class="toolbar-left">
+          <SearchSort
+            v-model="search"
+            v-model:sort="sortField"
+            v-model:desc="sortDesc"
+            :sort-options="sortOptions"
+            placeholder="Search name, username, email..."
+          />
+          <button class="filter-btn" :class="{ 'filter-btn--active': filterActive }" @click="showFilter = true">
+            <UIcon name="i-lucide-list-filter" />
+            <span>Filter</span>
+            <span v-if="filterActive" class="filter-dot" />
+          </button>
+        </div>
         <button class="btn-primary" @click="openForm">
           + Add New
         </button>
       </div>
+
+      <!-- Modal filter: Role & Status (live, langsung terapkan) -->
+      <AppModal v-model="showFilter" title="Filter">
+        <div class="filter-modal">
+          <div class="filter-group">
+            <div class="filter-group-label">Role</div>
+            <div class="filter-options">
+              <label class="filter-opt"><input v-model="filterRole" type="radio" value=""><span>All</span></label>
+              <label class="filter-opt"><input v-model="filterRole" type="radio" value="admin"><span>Administrator</span></label>
+              <label class="filter-opt"><input v-model="filterRole" type="radio" value="staff"><span>Operator</span></label>
+            </div>
+          </div>
+          <div class="filter-group">
+            <div class="filter-group-label">Status</div>
+            <div class="filter-options">
+              <label class="filter-opt"><input v-model="filterStatus" type="radio" value=""><span>All</span></label>
+              <label class="filter-opt"><input v-model="filterStatus" type="radio" value="active"><span>Active</span></label>
+              <label class="filter-opt"><input v-model="filterStatus" type="radio" value="inactive"><span>Inactive</span></label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-ghost" @click="resetFilter">Reset to default</button>
+          <button type="button" class="btn-primary" @click="showFilter = false">Done</button>
+        </div>
+      </AppModal>
 
       <AppModal v-model="showForm" :title="editingId ? 'Edit Internal User' : 'New Internal User'" :hide-close="true">
         <form class="modal-form" @submit.prevent="submit">
@@ -324,10 +444,7 @@
             </div>
 
             <div>
-              <label class="form-label">
-                WhatsApp <span class="req">*</span>
-                <span v-if="errors.whatsapp === 'required'" class="label-required">Required</span>
-              </label>
+              <label class="form-label">WhatsApp</label>
               <input
                 v-model="form.whatsapp"
                 class="text-input"
@@ -393,22 +510,21 @@
       </Teleport>
 
       <div class="table-card">
-        <div class="table-scroll">
+        <div ref="scrollEl" class="table-scroll" @scroll="onScroll">
           <table class="data-table">
             <thead>
               <tr>
-                <th style="width:56px" />
+                <th style="width:56px">Profile</th>
                 <th style="min-width:190px">Full Name</th>
-                <th>Username</th>
+                <th style="min-width:150px">Username</th>
                 <th style="min-width:200px">Email</th>
-                <th>WhatsApp</th>
-                <th>Role</th>
-                <th>Group Access</th>
+                <th class="shrink-col" style="min-width:180px">WhatsApp</th>
+                <th class="shrink-col">Role</th>
                 <th class="text-center" style="width:110px">Status</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="u in paged" :key="u.id" class="clickable" @click="openEdit(u)">
+              <tr v-for="u in users" :key="u.id" class="clickable" @click="openEdit(u)">
                 <td class="text-center">
                   <img
                     v-if="u.profile_image && !imgError[u.id]"
@@ -424,7 +540,6 @@
                 <td>{{ u.email }}</td>
                 <td>{{ u.whatsapp || '—' }}</td>
                 <td>{{ roleLabel(u.role) }}</td>
-                <td>{{ u.group_access || '—' }}</td>
                 <td class="text-center">
                   <button
                     class="toggle"
@@ -438,15 +553,37 @@
               </tr>
             </tbody>
           </table>
-          <EmptyState v-if="!filtered.length" text="No users found" icon="i-lucide-users" />
+          <div v-if="loading && users.length" class="table-loading">
+            <UIcon name="i-lucide-loader-circle" class="spin" /> Loading…
+          </div>
+          <EmptyState v-if="!users.length && !loading" text="No users found" icon="i-lucide-users" />
         </div>
-        <TablePager v-model:page="page" :total="filtered.length" :page-size="pageSize" />
+        <TablePager :page="currentPage" :total="total" :page-size="pageSize" readonly />
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+  /* Header halaman: breadcrumbs teks + garis batas bawah. */
+  .page-header {
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 20px;
+  }
+  .breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .crumb-sep {
+    color: var(--text-muted);
+    opacity: 0.7;
+  }
+
   .modal-form {
     display: flex;
     flex-direction: column;
@@ -568,6 +705,108 @@
   .btn-ghost:hover {
     background: var(--bg-hover);
     color: var(--text-primary);
+  }
+
+  /* Kolom yang menciut ke lebar kontennya; sisa ruang tabel
+     dialirkan ke kolom lain (Full Name/Email/Username). */
+  .shrink-col {
+    width: 1%;
+    white-space: nowrap;
+  }
+
+  /* ── Toolbar: grup kiri (search+sort+filter) & tombol Filter ── */
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 42px;
+    padding: 0 14px;
+    border-radius: 10px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .filter-btn:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+  }
+  .filter-btn--active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .filter-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* ── Modal filter ── */
+  .filter-modal {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .filter-group-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+  }
+  .filter-options {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .filter-opt {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-secondary);
+    user-select: none;
+    transition: all 0.15s ease;
+  }
+  .filter-opt:hover {
+    border-color: var(--accent);
+  }
+  .filter-opt input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  /* Chip aktif saat radio-nya terpilih. */
+  .filter-opt:has(input:checked) {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* Indikator "sedang memuat batch berikutnya" (infinite scroll). */
+  .table-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px;
+    font-size: 13px;
+    color: var(--text-muted);
   }
 
   /* ── Avatar ── */
