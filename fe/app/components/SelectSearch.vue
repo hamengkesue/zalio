@@ -66,6 +66,11 @@
     flex: '1 1 0%', minWidth: '0', width: '100%', border: 'none', outline: 'none', background: 'transparent',
     fontSize: '14px', color: 'var(--text-primary)', fontFamily: 'var(--font-family)',
   }
+  const searchClearStyle = {
+    boxSizing: 'border-box' as const, flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    width: '20px', height: '20px', borderRadius: '50%', border: 'none', background: 'transparent',
+    color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px', padding: '0',
+  }
   const optBaseStyle = {
     boxSizing: 'border-box' as const, display: 'block', width: '100%', margin: '0',
     textAlign: 'left' as const,
@@ -93,6 +98,10 @@
     nextTick(() => searchEl.value?.focus())
   }
   function closeMenu() { open.value = false }
+  function clearSearch() {
+    search.value = ''
+    nextTick(() => searchEl.value?.focus())
+  }
   function toggle() { open.value ? closeMenu() : openMenu() }
   function pick(o: Option) {
     if (model.value !== o.value) { model.value = o.value; emit('change') }
@@ -153,6 +162,9 @@
         <div class="sls-search" :style="searchStyle">
           <UIcon name="i-lucide-search" class="sls-search-ic" :style="{ color: 'var(--text-muted)', flex: '0 0 auto' }" />
           <input ref="searchEl" v-model="search" type="text" placeholder="Search..." :style="searchInputStyle" @keydown="onKeydown">
+          <button v-if="search" type="button" class="sls-search-clear" :style="searchClearStyle" title="Clear search" @click="clearSearch">
+            <UIcon name="i-lucide-x" />
+          </button>
         </div>
         <div class="sls-list" :style="{ boxSizing: 'border-box', maxHeight: pos.maxH + 'px', overflowY: 'auto', overflowX: 'hidden', padding: '6px' }">
           <button
