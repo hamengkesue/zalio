@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  useHead({ title: 'Zalio ERP — UoM' })
+  useHead({ title: 'Zalio ERP — Unit of Measurement' })
 
   const { items, total, fetchPage, createUom, updateUom, toggleActive } = useUoms()
   const toast = useToast()
@@ -143,11 +143,11 @@
   <div class="page">
     <div class="page-body">
       <div class="page-header">
-        <h1 class="page-title">UoM</h1>
+        <h1 class="page-title">Unit of Measurement</h1>
         <p class="breadcrumbs">
           <span>Products</span>
           <span class="crumb-sep">›</span>
-          <span>UoM</span>
+          <span>Unit of Measurement</span>
         </p>
       </div>
 

@@ -272,7 +272,7 @@
             </thead>
             <tbody>
               <tr v-for="cat in items" :key="cat.id" class="clickable" @click="openEdit(cat)">
-                <td class="text-center">
+                <td>
                   <img
                     v-if="cat.banner_image && !imgError[cat.id]"
                     :src="`${API_BASE}/files/${cat.banner_image}`"
@@ -395,7 +395,7 @@
     height: 34px;
     border-radius: 6px;
   }
-  .banner-img { display: block; margin: 0 auto; object-fit: cover; }
+  .banner-img { display: block; margin: 0; object-fit: cover; }
   .banner-fallback {
     display: inline-flex;
     align-items: center;

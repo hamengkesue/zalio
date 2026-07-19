@@ -304,6 +304,12 @@ body {
 }
 .data-table .text-right { text-align: right; }
 .data-table .text-center { text-align: center; }
+/* Tepi kiri kolom pertama & tepi kanan kolom terakhir dibuat lebih lega supaya
+   isi tabel tidak mepet ke tepi kartu (18px terasa terlalu rapat di sisi kiri). */
+.data-table th:first-child,
+.data-table td:first-child { padding-left: 28px; }
+.data-table th:last-child,
+.data-table td:last-child { padding-right: 28px; }
 .font-semibold { font-weight: 600; }
 
 /* ── Pager footer ── */
