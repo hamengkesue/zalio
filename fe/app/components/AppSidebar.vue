@@ -48,6 +48,39 @@
     if (hideTimer) clearTimeout(hideTimer)
     hideTimer = setTimeout(() => { settingsOpen.value = false }, 120)
   }
+
+  // ── Menu Products + flyout submenu (di nav utama, melayang ke kanan) ──
+  const productItems = [
+    { label: 'Products', icon: 'i-lucide-box', to: '/products' },
+    { label: 'Brands', icon: 'i-lucide-tag', to: '/products/brands' },
+    { label: 'Categories', icon: 'i-lucide-layers', to: '/products/categories' },
+    { label: 'Subcategories', icon: 'i-lucide-list-tree', to: '/products/subcategories' },
+    { label: 'UoM', icon: 'i-lucide-ruler', to: '/products/uom' },
+  ]
+  const isProductsActive = computed(() => route.path === '/products' || route.path.startsWith('/products/'))
+
+  const productsBtnRef = ref<HTMLElement>()
+  const productsOpen = ref(false)
+  const productsPopStyle = ref<Record<string, string>>({})
+  let productsHideTimer: ReturnType<typeof setTimeout> | null = null
+
+  function showProducts() {
+    if (productsHideTimer) { clearTimeout(productsHideTimer); productsHideTimer = null }
+    const el = productsBtnRef.value
+    if (el) {
+      const r = el.getBoundingClientRect()
+      productsPopStyle.value = {
+        left: `${r.right + 10}px`,
+        top: `${r.top}px`,
+        minWidth: '200px',
+      }
+    }
+    productsOpen.value = true
+  }
+  function hideProductsSoon() {
+    if (productsHideTimer) clearTimeout(productsHideTimer)
+    productsHideTimer = setTimeout(() => { productsOpen.value = false }, 120)
+  }
 </script>
 
 <template>
@@ -68,6 +101,24 @@
           <UIcon :name="item.icon" class="sidebar-icon" />
           <span v-if="!collapsed" class="sidebar-label">{{ item.label }}</span>
         </NuxtLink>
+      </div>
+
+      <!-- Products (submenu muncul saat hover, melayang ke kanan) -->
+      <div v-if="isAdmin" class="nav-group" @mouseenter="showProducts" @mouseleave="hideProductsSoon">
+        <span v-if="!collapsed" class="nav-section">Catalog</span>
+        <button
+          ref="productsBtnRef"
+          type="button"
+          class="sidebar-item settings-toggle"
+          :class="{ active: isProductsActive || productsOpen }"
+          :title="collapsed ? 'Products' : undefined"
+        >
+          <UIcon name="i-lucide-package" class="sidebar-icon" />
+          <template v-if="!collapsed">
+            <span class="sidebar-label">Products</span>
+            <UIcon name="i-lucide-chevron-right" class="settings-caret" />
+          </template>
+        </button>
       </div>
     </nav>
 
@@ -112,6 +163,32 @@
             class="settings-pop-item"
             :class="{ active: route.path === it.to }"
             @click="settingsOpen = false"
+          >
+            <UIcon :name="it.icon" class="settings-pop-icon" />
+            <span>{{ it.label }}</span>
+          </NuxtLink>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- ── Flyout submenu Products ── -->
+    <Teleport to="body">
+      <Transition name="pop">
+        <div
+          v-if="productsOpen"
+          class="settings-popover"
+          :style="productsPopStyle"
+          @mouseenter="showProducts"
+          @mouseleave="hideProductsSoon"
+        >
+          <span class="settings-popover-title">Products</span>
+          <NuxtLink
+            v-for="it in productItems"
+            :key="it.to"
+            :to="it.to"
+            class="settings-pop-item"
+            :class="{ active: route.path === it.to }"
+            @click="productsOpen = false"
           >
             <UIcon :name="it.icon" class="settings-pop-icon" />
             <span>{{ it.label }}</span>

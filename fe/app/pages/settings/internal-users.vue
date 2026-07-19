@@ -7,7 +7,7 @@
 
   // ── search / sort / infinite-scroll pagination (server-side) ──
   const search = ref('')
-  const sortField = ref('')
+  const sortField = ref('name')       // default: urut nama (full name) asc
   const sortDesc = ref(false)
   const pageSize = 8
   const currentPage = ref(1)          // halaman yang sedang tampak (indikator, dari posisi scroll)
@@ -23,9 +23,10 @@
   const DEFAULT_STATUS = 'active' // default tabel: hanya user Active
   const filterRole = ref('')                // ''=All, 'admin', 'staff'
   const filterStatus = ref(DEFAULT_STATUS)  // ''=All, 'active', 'inactive'
-  const showFilter = ref(false)
-  // true kalau filter menyimpang dari default → tampilkan titik indikator di tombol.
-  const filterActive = computed(() => filterRole.value !== '' || filterStatus.value !== DEFAULT_STATUS)
+  const roleFilterOptions = [{ value: '', label: 'All roles' }, { value: 'admin', label: 'Administrator' }, { value: 'staff', label: 'Operator' }]
+  const statusFilterOptions = [{ value: '', label: 'All status' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]
+  // Jumlah filter yang menyimpang dari default (untuk badge di tombol filter).
+  const filterCount = computed(() => (filterRole.value !== '' ? 1 : 0) + (filterStatus.value !== DEFAULT_STATUS ? 1 : 0))
 
   function resetFilter() {
     filterRole.value = ''
@@ -329,41 +330,21 @@
             :sort-options="sortOptions"
             placeholder="Search name, username, email..."
           />
-          <button class="filter-btn" :class="{ 'filter-btn--active': filterActive }" title="Filter" @click="showFilter = true">
-            <UIcon name="i-lucide-list-filter" />
-            <span v-if="filterActive" class="filter-dot" />
-          </button>
+          <AppFilter :active-count="filterCount" width="min(420px, 90vw)" @reset="resetFilter">
+            <div>
+              <label class="form-label">Role</label>
+              <SelectSearch v-model="filterRole" :options="roleFilterOptions" placeholder="All roles" />
+            </div>
+            <div>
+              <label class="form-label">Status</label>
+              <SelectSearch v-model="filterStatus" :options="statusFilterOptions" placeholder="All status" />
+            </div>
+          </AppFilter>
         </div>
         <button class="btn-primary" @click="openForm">
           + Add New
         </button>
       </div>
-
-      <!-- Modal filter: Role & Status (live, langsung terapkan) -->
-      <AppModal v-model="showFilter" title="Filter">
-        <div class="filter-modal">
-          <div class="filter-group">
-            <div class="filter-group-label">Role</div>
-            <div class="filter-options">
-              <label class="filter-opt"><input v-model="filterRole" type="radio" value=""><span>All</span></label>
-              <label class="filter-opt"><input v-model="filterRole" type="radio" value="admin"><span>Administrator</span></label>
-              <label class="filter-opt"><input v-model="filterRole" type="radio" value="staff"><span>Operator</span></label>
-            </div>
-          </div>
-          <div class="filter-group">
-            <div class="filter-group-label">Status</div>
-            <div class="filter-options">
-              <label class="filter-opt"><input v-model="filterStatus" type="radio" value=""><span>All</span></label>
-              <label class="filter-opt"><input v-model="filterStatus" type="radio" value="active"><span>Active</span></label>
-              <label class="filter-opt"><input v-model="filterStatus" type="radio" value="inactive"><span>Inactive</span></label>
-            </div>
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn-ghost" @click="resetFilter">Reset to default</button>
-          <button type="button" class="btn-primary" @click="showFilter = false">Done</button>
-        </div>
-      </AppModal>
 
       <AppModal v-model="showForm" :title="editingId ? 'Edit Internal User' : 'New Internal User'" :hide-close="true">
         <form class="modal-form" @submit.prevent="submit">

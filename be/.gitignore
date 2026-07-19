@@ -1,5 +1,6 @@
-# Binaries
-api
+# Binaries (compiled output only — NOT the cmd/api source directory)
+/api
+/cmd/api/api
 *.exe
 
 # Env

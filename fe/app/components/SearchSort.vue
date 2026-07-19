@@ -59,8 +59,8 @@
     display: flex;
     align-items: center;
     height: 40px;
-    flex: 1 1 320px;
-    max-width: 560px;
+    flex: 1 1 420px;
+    max-width: 720px;
     border: 1px solid var(--border-color);
     border-radius: 10px;
     background-color: var(--bg-surface);

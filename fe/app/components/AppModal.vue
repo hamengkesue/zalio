@@ -1,9 +1,12 @@
 <script setup lang="ts">
   const open = defineModel<boolean>({ default: false })
-  defineProps<{ title?: string; hideClose?: boolean }>()
+  // maxWidth: override lebar panel (mis. "min(1150px, 96vw)"). Default: 520px (CSS).
+  // hideClose: sembunyikan tombol X. Modal seperti ini (form dengan tombol Cancel/Save)
+  // JUGA tidak boleh tertutup lewat klik backdrop atau Escape — hanya via tombolnya.
+  const props = defineProps<{ title?: string; hideClose?: boolean; maxWidth?: string }>()
 
   function onKey(e: KeyboardEvent) {
-    if (e.key === 'Escape') open.value = false
+    if (e.key === 'Escape' && !props.hideClose) open.value = false
   }
   onMounted(() => window.addEventListener('keydown', onKey))
   onUnmounted(() => window.removeEventListener('keydown', onKey))
@@ -12,8 +15,8 @@
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="open" class="modal-overlay" @click.self="open = false">
-        <div class="modal-panel">
+      <div v-if="open" class="modal-overlay" @click.self="!hideClose && (open = false)">
+        <div class="modal-panel" :style="maxWidth ? { maxWidth } : undefined">
           <div class="modal-head">
             <h2 class="modal-title">{{ title }}</h2>
             <button v-if="!hideClose" class="modal-close" title="Close" @click="open = false">
