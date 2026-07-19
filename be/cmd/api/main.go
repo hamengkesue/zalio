@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"zalio-erp-be/internal/modules/auth"
+	"zalio-erp-be/internal/modules/finance"
 	"zalio-erp-be/internal/modules/ping"
 	"zalio-erp-be/internal/modules/product"
 	"zalio-erp-be/internal/modules/upload"
@@ -65,6 +66,7 @@ func main() {
 	ping.Register(api, pool)               // demo Fase 0 — dibiarkan publik
 	upload.Register(r, protected, store)   // /files/* (publik) + /upload/profile-image (login)
 	product.Register(protected, pool)      // master produk (brand/category/subcategory/uom) — admin-only
+	finance.Register(protected, pool)      // Finance & Accounting — Chart of Account (admin-only)
 
 	log.Printf("Server starting on :%s", cfg.ServerPort)
 	if err := r.Run(":" + cfg.ServerPort); err != nil {

@@ -81,6 +81,35 @@
     if (productsHideTimer) clearTimeout(productsHideTimer)
     productsHideTimer = setTimeout(() => { productsOpen.value = false }, 120)
   }
+
+  // ── Menu Finance & Accounting + flyout submenu ──
+  const financeItems = [
+    { label: 'Chart of Account', icon: 'i-lucide-book-open', to: '/finance/chart-of-account' },
+  ]
+  const isFinanceActive = computed(() => route.path.startsWith('/finance'))
+
+  const financeBtnRef = ref<HTMLElement>()
+  const financeOpen = ref(false)
+  const financePopStyle = ref<Record<string, string>>({})
+  let financeHideTimer: ReturnType<typeof setTimeout> | null = null
+
+  function showFinance() {
+    if (financeHideTimer) { clearTimeout(financeHideTimer); financeHideTimer = null }
+    const el = financeBtnRef.value
+    if (el) {
+      const r = el.getBoundingClientRect()
+      financePopStyle.value = {
+        left: `${r.right + 10}px`,
+        top: `${r.top}px`,
+        minWidth: '200px',
+      }
+    }
+    financeOpen.value = true
+  }
+  function hideFinanceSoon() {
+    if (financeHideTimer) clearTimeout(financeHideTimer)
+    financeHideTimer = setTimeout(() => { financeOpen.value = false }, 120)
+  }
 </script>
 
 <template>
@@ -116,6 +145,23 @@
           <UIcon name="i-lucide-package" class="sidebar-icon" />
           <template v-if="!collapsed">
             <span class="sidebar-label">Product Management</span>
+            <UIcon name="i-lucide-chevron-right" class="settings-caret" />
+          </template>
+        </button>
+      </div>
+
+      <!-- Finance & Accounting (submenu muncul saat hover, melayang ke kanan) -->
+      <div v-if="isAdmin" class="nav-group" @mouseenter="showFinance" @mouseleave="hideFinanceSoon">
+        <button
+          ref="financeBtnRef"
+          type="button"
+          class="sidebar-item settings-toggle"
+          :class="{ active: isFinanceActive || financeOpen }"
+          :title="collapsed ? 'Finance & Accounting' : undefined"
+        >
+          <UIcon name="i-lucide-wallet" class="sidebar-icon" />
+          <template v-if="!collapsed">
+            <span class="sidebar-label">Finance &amp; Accounting</span>
             <UIcon name="i-lucide-chevron-right" class="settings-caret" />
           </template>
         </button>
@@ -189,6 +235,32 @@
             class="settings-pop-item"
             :class="{ active: route.path === it.to }"
             @click="productsOpen = false"
+          >
+            <UIcon :name="it.icon" class="settings-pop-icon" />
+            <span>{{ it.label }}</span>
+          </NuxtLink>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- ── Flyout submenu Finance & Accounting ── -->
+    <Teleport to="body">
+      <Transition name="pop">
+        <div
+          v-if="financeOpen"
+          class="settings-popover"
+          :style="financePopStyle"
+          @mouseenter="showFinance"
+          @mouseleave="hideFinanceSoon"
+        >
+          <span class="settings-popover-title">Finance &amp; Accounting</span>
+          <NuxtLink
+            v-for="it in financeItems"
+            :key="it.to"
+            :to="it.to"
+            class="settings-pop-item"
+            :class="{ active: route.path === it.to }"
+            @click="financeOpen = false"
           >
             <UIcon :name="it.icon" class="settings-pop-icon" />
             <span>{{ it.label }}</span>
