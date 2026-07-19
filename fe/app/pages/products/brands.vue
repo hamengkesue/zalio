@@ -180,7 +180,7 @@
       <div class="page-header">
         <h1 class="page-title">Brands</h1>
         <p class="breadcrumbs">
-          <span>Products</span>
+          <span>Product Management</span>
           <span class="crumb-sep">›</span>
           <span>Brands</span>
         </p>

@@ -145,7 +145,7 @@
       <div class="page-header">
         <h1 class="page-title">Unit of Measurement</h1>
         <p class="breadcrumbs">
-          <span>Products</span>
+          <span>Product Management</span>
           <span class="crumb-sep">›</span>
           <span>Unit of Measurement</span>
         </p>

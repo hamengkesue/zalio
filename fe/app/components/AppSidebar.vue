@@ -111,11 +111,11 @@
           type="button"
           class="sidebar-item settings-toggle"
           :class="{ active: isProductsActive || productsOpen }"
-          :title="collapsed ? 'Products' : undefined"
+          :title="collapsed ? 'Product Management' : undefined"
         >
           <UIcon name="i-lucide-package" class="sidebar-icon" />
           <template v-if="!collapsed">
-            <span class="sidebar-label">Products</span>
+            <span class="sidebar-label">Product Management</span>
             <UIcon name="i-lucide-chevron-right" class="settings-caret" />
           </template>
         </button>
@@ -181,7 +181,7 @@
           @mouseenter="showProducts"
           @mouseleave="hideProductsSoon"
         >
-          <span class="settings-popover-title">Products</span>
+          <span class="settings-popover-title">Product Management</span>
           <NuxtLink
             v-for="it in productItems"
             :key="it.to"

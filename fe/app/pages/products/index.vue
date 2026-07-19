@@ -902,7 +902,7 @@
     <div class="page-body">
       <div class="page-header">
         <h1 class="page-title">Products</h1>
-        <p class="breadcrumbs"><span>Products</span></p>
+        <p class="breadcrumbs"><span>Product Management</span> <span class="crumb-sep">›</span> <span>Products</span></p>
       </div>
 
       <div class="toolbar">
@@ -1372,9 +1372,9 @@
                 <th style="width:56px"></th>
                 <th style="min-width:240px">Product</th>
                 <th>Brand</th>
-                <th style="min-width:160px">Category</th>
+                <th style="min-width:160px">Category - Subcategory</th>
                 <th style="min-width:130px">Selling Price</th>
-                <th style="min-width:130px">COGS/unit</th>
+                <th style="min-width:130px">COGS Value</th>
                 <th class="text-center" style="width:110px">Status</th>
               </tr>
             </thead>

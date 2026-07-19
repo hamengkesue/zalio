@@ -181,7 +181,7 @@
       <div class="page-header">
         <h1 class="page-title">Categories</h1>
         <p class="breadcrumbs">
-          <span>Products</span>
+          <span>Product Management</span>
           <span class="crumb-sep">›</span>
           <span>Categories</span>
         </p>
