@@ -23,6 +23,9 @@
     <div class="ss-search">
       <UIcon name="i-lucide-search" class="ss-icon" />
       <input v-model="search" :placeholder="placeholder ?? 'Search...'" class="ss-input">
+      <button v-if="search" type="button" class="ss-clear" title="Clear search" @click="search = ''">
+        <UIcon name="i-lucide-x" />
+      </button>
     </div>
 
     <template v-if="sortOptions?.length">
@@ -88,6 +91,24 @@
   }
   .ss-input::placeholder {
     color: var(--text-muted);
+  }
+  .ss-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-size: 14px;
+  }
+  .ss-clear:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
   }
   .ss-divider {
     width: 1px;
