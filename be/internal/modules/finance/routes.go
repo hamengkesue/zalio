@@ -18,6 +18,7 @@ func Register(protected *gin.RouterGroup, pool *pgxpool.Pool) {
 
 	coa := &CoaHandler{repo: &CoaRepo{pool: pool}}
 	admin.GET("/coa", coa.List)
+	admin.GET("/coa-options", coa.Options)
 	admin.POST("/coa", coa.Create)
 	admin.PUT("/coa/:id", coa.Update)
 	admin.PATCH("/coa/:id/toggle-active", coa.ToggleActive)

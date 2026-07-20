@@ -114,6 +114,40 @@ func (r *CoaRepo) getOne(ctx context.Context, id string) (*Coa, error) {
 	return scanCoa(r.pool.QueryRow(ctx, coaSelect+coaFrom+` WHERE a.id = $1::uuid`, id))
 }
 
+// CoaOption: bentuk ringkas untuk dropdown (mis. di form produk).
+type CoaOption struct {
+	ID                 string `json:"id"`
+	AccountCode        string `json:"account_code"`
+	AccountName        string `json:"account_name"`
+	AccountTypeName    string `json:"account_type_name"`
+	ClassificationName string `json:"classification_name"`
+	IsContra           bool   `json:"is_contra"`
+}
+
+// Options: SEMUA akun aktif (tanpa paginasi) untuk dropdown.
+func (r *CoaRepo) Options(ctx context.Context) ([]CoaOption, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT a.id::text, a.account_code, a.account_name, t.account_type_name, c.classification_name, a.is_contra
+		FROM m_coa a
+		JOIN m_coa_type t ON t.account_type_code = a.account_type_code
+		JOIN m_coa_classification c ON c.classification_code = t.classification_code
+		WHERE a.is_active
+		ORDER BY a.account_code`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	list := []CoaOption{}
+	for rows.Next() {
+		var x CoaOption
+		if err := rows.Scan(&x.ID, &x.AccountCode, &x.AccountName, &x.AccountTypeName, &x.ClassificationName, &x.IsContra); err != nil {
+			return nil, err
+		}
+		list = append(list, x)
+	}
+	return list, rows.Err()
+}
+
 // typeIsCredit: saldo normal default tipe. errNoType kalau tipe tidak ada.
 var errNoType = errors.New("invalid account type")
 
@@ -207,6 +241,15 @@ func (r *CoaRepo) ToggleActive(ctx context.Context, id string, active bool, user
 // ─── Handler ───
 
 type CoaHandler struct{ repo *CoaRepo }
+
+func (h *CoaHandler) Options(c *gin.Context) {
+	items, err := h.repo.Options(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": items})
+}
 
 func (h *CoaHandler) List(c *gin.Context) {
 	limit, offset, search, sort, desc := listParams(c)

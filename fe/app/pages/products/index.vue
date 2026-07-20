@@ -3,7 +3,7 @@
 
   const {
     items, total, fetchPage, getProduct, getNextSku, createProduct, updateProduct, toggleVariantActive, uploadImage,
-    fetchBrandOptions, fetchCategoryOptions, fetchSubcategoryOptions, fetchUomOptions, fetchCountryOptions,
+    fetchBrandOptions, fetchCategoryOptions, fetchSubcategoryOptions, fetchUomOptions, fetchCountryOptions, fetchCoaOptions,
     createBrand, createCategory, createSubcategory,
   } = useProducts()
   const toast = useToast()
@@ -593,11 +593,43 @@
     syncUomState()
   }
 
-  const COA_FIELDS = [
-    ['coa_inventory', 'Inventory'], ['coa_sales', 'Sales'], ['coa_sales_return', 'Sales Return'],
-    ['coa_sales_discount', 'Sales Discount'], ['coa_good_in_transit', 'Good in Transit'],
-    ['coa_cogs', 'COGS'], ['coa_purchase_return', 'Purchase Return'], ['coa_unbilled_goods', 'Unbilled Goods'],
-  ] as const
+  // Tiap field COA disaring ke akun yang relevan (per klasifikasi/tipe + flag kontra).
+  const byType = (t: string) => (a: CoaAccountOpt) => a.account_type_name === t
+  const byClass = (c: string, contra?: boolean) => (a: CoaAccountOpt) => a.classification_name === c && (contra === undefined || a.is_contra === contra)
+  const COA_FIELDS: { key: string; label: string; filter: (a: CoaAccountOpt) => boolean }[] = [
+    { key: 'coa_inventory', label: 'Inventory', filter: byType('Persediaan Barang') },
+    { key: 'coa_sales', label: 'Sales', filter: byClass('Pendapatan', false) },
+    { key: 'coa_sales_return', label: 'Sales Return', filter: byClass('Pendapatan', true) },
+    { key: 'coa_sales_discount', label: 'Sales Discount', filter: byClass('Pendapatan', true) },
+    { key: 'coa_good_in_transit', label: 'Good in Transit', filter: byType('Persediaan Barang') },
+    { key: 'coa_cogs', label: 'COGS', filter: byClass('Beban Pokok Pendapatan') },
+    { key: 'coa_purchase_return', label: 'Purchase Return', filter: byType('Persediaan Barang') },
+    { key: 'coa_unbilled_goods', label: 'Unbilled Goods', filter: byClass('Liabilitas') },
+  ]
+
+  // Akun default untuk produk BARU (per kode akun). Diterapkan saat openForm.
+  const COA_DEFAULT_CODES: Record<string, string> = {
+    coa_inventory: '13001',       // Persediaan Produk
+    coa_sales: '40001',           // Penjualan Produk
+    coa_sales_return: '40003',    // Retur Penjualan
+    coa_sales_discount: '40004',  // Diskon Penjualan
+    coa_good_in_transit: '13002', // Persediaan Terkirim
+    coa_cogs: '51001',            // Harga Pokok Penjualan
+    coa_purchase_return: '13001', // Persediaan Produk
+    coa_unbilled_goods: '22003',  // Hutang Pembelian Belum Ditagih
+  }
+  function applyCoaDefaults() {
+    for (const [key, code] of Object.entries(COA_DEFAULT_CODES)) {
+      (form as any)[key] = coaAccounts.value.find(a => a.account_code === code)?.id || ''
+    }
+  }
+
+  const coaAccounts = ref<CoaAccountOpt[]>([])
+  const coaErrors = reactive<Record<string, boolean>>({})
+  // Opsi dropdown untuk sebuah field COA: akun ter-saring, label "kode · nama".
+  function coaOptionsFor(f: { filter: (a: CoaAccountOpt) => boolean }) {
+    return coaAccounts.value.filter(f.filter).map(a => ({ value: a.id, label: `${a.account_code} · ${a.account_name}` }))
+  }
 
   // selling_uom hanya dari uom_1/2/3 yang dipilih
   const sellingUomOpts = computed(() => {
@@ -696,6 +728,7 @@
     dimInput.length_cm = dimInput.width_cm = dimInput.height_cm = dimInput.weight_gr = ''
     errors.product_name = errors.brand_id = errors.category_id = errors.subcategory_id = errors.uom_1 = errors.selling_uom = errors.stocking_uom = errors.ratio_2 = errors.ratio_3 = errors.sku = errors.weight_gr = errors.description = ''
     errors.variant_name_1 = errors.variant_values_1 = errors.variant_values_2 = ''
+    for (const f of COA_FIELDS) coaErrors[f.key] = false
     productActive.value = true
     variantLocked.values1 = []
     variantLocked.values2 = []
@@ -709,8 +742,8 @@
   watch(() => form.uom_3, () => syncUomState())
 
   async function loadOptions() {
-    ;[brandOpts.value, categoryOpts.value, uomOpts.value] = await Promise.all([
-      fetchBrandOptions(), fetchCategoryOptions(), fetchUomOptions(),
+    ;[brandOpts.value, categoryOpts.value, uomOpts.value, coaAccounts.value] = await Promise.all([
+      fetchBrandOptions(), fetchCategoryOptions(), fetchUomOptions(), fetchCoaOptions(),
     ])
   }
 
@@ -719,6 +752,7 @@
     skuMode.value = 'auto'
     loadSkuPreview()
     await loadOptions()
+    applyCoaDefaults() // produk baru: akun COA terisi default
     showForm.value = true
   }
 
@@ -820,7 +854,17 @@
     // Field khusus variant.
     errors.variant_name_1 = isVariant ? (form.variant_name_1.trim() ? '' : 'required') : ''
     errors.variant_values_1 = isVariant ? (variantAxes.values1.filter(Boolean).length ? '' : 'required') : ''
-    const sharedOk = !errors.product_name && !errors.brand_id && !errors.category_id && !errors.subcategory_id && !errors.uom_1 && !errors.selling_uom && !errors.stocking_uom && !ratio2Err.value && !ratio3Err.value && !errors.description
+    // Chart of Accounts — ke-8 akun wajib diisi.
+    let coaOk = true
+    for (const f of COA_FIELDS) {
+      const missing = !(form as any)[f.key]
+      coaErrors[f.key] = missing
+      if (missing) coaOk = false
+    }
+    if (!coaOk) {
+      toast.add({ title: 'Chart of Accounts required', description: 'Please select all 8 accounts in the Chart of Accounts section.', color: 'error' })
+    }
+    const sharedOk = !errors.product_name && !errors.brand_id && !errors.category_id && !errors.subcategory_id && !errors.uom_1 && !errors.selling_uom && !errors.stocking_uom && !ratio2Err.value && !ratio3Err.value && !errors.description && coaOk
     if (isVariant) {
       const rowsOk = variantListValid.value
       if (!rowsOk && sharedOk && !errors.variant_name_1 && !errors.variant_values_1) {
@@ -1215,9 +1259,18 @@
             <div class="pcard">
               <div class="pcard-title">Chart of Accounts <span class="section-note">Accounts that can be selected based on pre-defined accounts</span></div>
               <div class="pcard-body coa-grid">
-                <div v-for="[key, label] in COA_FIELDS" :key="key">
-                  <label class="form-label">{{ label }}</label>
-                  <input v-model="(form as any)[key]" class="text-input" placeholder="—">
+                <div v-for="f in COA_FIELDS" :key="f.key">
+                  <label class="form-label">
+                    {{ f.label }} <span class="req">*</span>
+                    <span v-if="coaErrors[f.key]" class="label-required">Required</span>
+                  </label>
+                  <SelectSearch
+                    v-model="(form as any)[f.key]"
+                    :options="coaOptionsFor(f)"
+                    placeholder="Select account"
+                    :invalid="coaErrors[f.key]"
+                    @change="coaErrors[f.key] = false"
+                  />
                 </div>
               </div>
             </div>

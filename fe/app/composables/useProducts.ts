@@ -21,6 +21,14 @@ export interface ProductListItem {
 
 export interface Opt { id: string; name: string }
 export interface CountryOpt { code: string; name: string; phone_code: string }
+export interface CoaAccountOpt {
+  id: string
+  account_code: string
+  account_name: string
+  account_type_name: string
+  classification_name: string
+  is_contra: boolean
+}
 
 const items = ref<ProductListItem[]>([])
 const total = ref(0)
@@ -143,6 +151,12 @@ export function useProducts() {
     const res = await apiFetch<{ data: CountryOpt[] }>(`/api/v1/countries`)
     return res.data ?? []
   }
+  // Akun COA aktif (untuk dropdown Chart of Accounts di form produk).
+  // Endpoint khusus: mengembalikan SEMUA akun aktif tanpa paginasi.
+  const fetchCoaOptions = async (): Promise<CoaAccountOpt[]> => {
+    const res = await apiFetch<{ data: CoaAccountOpt[] }>(`/api/v1/coa-options`)
+    return res.data ?? []
+  }
 
   // ── quick-add master (dari form produk) → kembalikan opsi baru ──
   const createBrand = async (body: { name: string; description?: string; logo?: string }): Promise<Opt> => {
@@ -164,7 +178,7 @@ export function useProducts() {
 
   return {
     items, total, fetchPage, getProduct, getNextSku, createProduct, updateProduct, toggleActive, toggleVariantActive, uploadImage,
-    fetchBrandOptions, fetchCategoryOptions, fetchSubcategoryOptions, fetchUomOptions, fetchCountryOptions,
+    fetchBrandOptions, fetchCategoryOptions, fetchSubcategoryOptions, fetchUomOptions, fetchCountryOptions, fetchCoaOptions,
     createBrand, createCategory, createSubcategory,
   }
 }

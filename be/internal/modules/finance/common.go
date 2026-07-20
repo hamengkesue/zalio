@@ -57,8 +57,11 @@ func statusCondCol(status, col string) string {
 func listParams(c *gin.Context) (limit, offset int, search, sort string, desc bool) {
 	limit = atoiDefault(c.Query("limit"), 8)
 	offset = atoiDefault(c.Query("offset"), 0)
-	if limit < 1 || limit > 100 {
+	if limit < 1 {
 		limit = 8
+	}
+	if limit > 100 {
+		limit = 100
 	}
 	if offset < 0 {
 		offset = 0
