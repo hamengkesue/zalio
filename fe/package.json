@@ -11,6 +11,8 @@
   "dependencies": {
     "@iconify-json/lucide": "^1.2.113",
     "@nuxt/ui": "^3",
+    "@zxing/browser": "^0.2.1",
+    "@zxing/library": "^0.23.0",
     "nuxt": "^3.17",
     "vue": "^3.5",
     "vue-router": "^4.5"

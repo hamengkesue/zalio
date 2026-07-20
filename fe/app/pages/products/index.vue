@@ -360,7 +360,9 @@
     catch (err: any) { toast.add({ title: 'Upload failed', description: err?.data?.error || 'Could not upload', color: 'error' }) }
     finally { uploadingVariantIdx.value = -1 }
   }
-  const errors = reactive({ product_name: '', brand_id: '', category_id: '', subcategory_id: '', uom_1: '', selling_uom: '', stocking_uom: '', ratio_2: '', ratio_3: '', sku: '', weight_gr: '', description: '', variant_name_1: '', variant_values_1: '', variant_values_2: '' })
+  const errors = reactive({ product_name: '', brand_id: '', category_id: '', subcategory_id: '', uom_1: '', selling_uom: '', stocking_uom: '', ratio_2: '', ratio_3: '', sku: '', barcode: '', weight_gr: '', description: '', variant_name_1: '', variant_values_1: '', variant_values_2: '' })
+  // Barcode variant yang duplikat (antar-baris form atau bentrok dgn DB) → tandai barisnya.
+  const dupBarcodes = ref(new Set<string>())
 
   // ── Other Information (read-only, dari DB/inventory) ──
   const totalQtyStock = ref(0) // menyusul: diambil dari modul inventory
@@ -728,6 +730,8 @@
     dimInput.length_cm = dimInput.width_cm = dimInput.height_cm = dimInput.weight_gr = ''
     errors.product_name = errors.brand_id = errors.category_id = errors.subcategory_id = errors.uom_1 = errors.selling_uom = errors.stocking_uom = errors.ratio_2 = errors.ratio_3 = errors.sku = errors.weight_gr = errors.description = ''
     errors.variant_name_1 = errors.variant_values_1 = errors.variant_values_2 = ''
+    errors.barcode = ''
+    dupBarcodes.value = new Set()
     for (const f of COA_FIELDS) coaErrors[f.key] = false
     productActive.value = true
     variantLocked.values1 = []
@@ -740,6 +744,14 @@
   watch(() => form.uom_1, () => syncUomState())
   watch(() => form.uom_2, () => syncUomState())
   watch(() => form.uom_3, () => syncUomState())
+
+  // ── Barcode scanner (kamera). Alat scanner fisik langsung mengetik ke field. ──
+  const scanOpen = ref(false)
+  const scanConfirm = ref(2) // search lebih ketat (3), field form 2
+  let scanSetter: ((code: string) => void) | null = null
+  function openScanner(setter: (code: string) => void, confirm = 2) { scanSetter = setter; scanConfirm.value = confirm; scanOpen.value = true }
+  function onScanDetected(code: string) { scanSetter?.(code.trim()); scanSetter = null }
+  function clearBarcodeDup() { if (dupBarcodes.value.size) dupBarcodes.value = new Set() }
 
   async function loadOptions() {
     ;[brandOpts.value, categoryOpts.value, uomOpts.value, coaAccounts.value] = await Promise.all([
@@ -864,13 +876,25 @@
     if (!coaOk) {
       toast.add({ title: 'Chart of Accounts required', description: 'Please select all 8 accounts in the Chart of Accounts section.', color: 'error' })
     }
-    const sharedOk = !errors.product_name && !errors.brand_id && !errors.category_id && !errors.subcategory_id && !errors.uom_1 && !errors.selling_uom && !errors.stocking_uom && !ratio2Err.value && !ratio3Err.value && !errors.description && coaOk
+    // Barcode tidak boleh duplikat antar-baris varian (uniknya di DB dicek backend saat simpan).
+    dupBarcodes.value = new Set()
+    if (isVariant) {
+      const seen = new Set<string>()
+      for (const r of variantRows.value) {
+        const bc = (r.barcode || '').trim()
+        if (!bc) continue
+        if (seen.has(bc)) dupBarcodes.value.add(bc)
+        seen.add(bc)
+      }
+    }
+    const barcodeOk = dupBarcodes.value.size === 0
+    const sharedOk =!errors.product_name && !errors.brand_id && !errors.category_id && !errors.subcategory_id && !errors.uom_1 && !errors.selling_uom && !errors.stocking_uom && !ratio2Err.value && !ratio3Err.value && !errors.description && coaOk
     if (isVariant) {
       const rowsOk = variantListValid.value
       if (!rowsOk && sharedOk && !errors.variant_name_1 && !errors.variant_values_1) {
         toast.add({ title: 'Check variants', description: 'Every variant row needs a SKU' + (applyToAll.weight_gr ? ' and a weight greater than 0' : '') + '.', color: 'error' })
       }
-      return sharedOk && !errors.variant_name_1 && !errors.variant_values_1 && rowsOk
+      return sharedOk && !errors.variant_name_1 && !errors.variant_values_1 && rowsOk && barcodeOk
     }
     return sharedOk && !errors.sku && !errors.weight_gr
   }
@@ -925,8 +949,17 @@
     } catch (e: any) {
       const field = e?.data?.field
       const msg = e?.data?.error
-      if (field && field in errors) (errors as Record<string, string>)[field] = msg || 'Invalid'
-      else toast.add({ title: 'Failed', description: msg || 'Could not save product', color: 'error' })
+      if (field === 'barcode') {
+        // Tanpa toast (ketiban modal) — cukup inline: single = error di field,
+        // variant = baris ditandai merah + pesan inline di atas tabel.
+        const val = String(e?.data?.value || '')
+        if (form.product_type === 'variant' && val) dupBarcodes.value = new Set([...dupBarcodes.value, val])
+        else errors.barcode = msg || 'Barcode already exists'
+      } else if (field && field in errors) {
+        ;(errors as Record<string, string>)[field] = msg || 'Invalid'
+      } else {
+        toast.add({ title: 'Failed', description: msg || 'Could not save product', color: 'error' })
+      }
     } finally {
       saving.value = false
     }
@@ -956,8 +989,14 @@
             v-model:sort="sortField"
             v-model:desc="sortDesc"
             :sort-options="sortOptions"
-            placeholder="Search product name or SKU..."
-          />
+            placeholder="Search name, SKU, or barcode..."
+          >
+            <template #trailing>
+              <button type="button" class="ss-scan" title="Scan barcode to search" @click="openScanner(c => { search = c }, 3)">
+                <UIcon name="i-lucide-scan-barcode" />
+              </button>
+            </template>
+          </SearchSort>
           <AppFilter :active-count="activeFilterCount" @reset="resetFilters">
             <div>
               <label class="form-label">Product Type</label>
@@ -1028,8 +1067,13 @@
                       <div v-if="errors.sku && errors.sku !== 'required'" class="field-tip">{{ errors.sku }}</div>
                     </div>
                     <div class="c3">
-                      <label class="form-label">Barcode</label>
-                      <input v-model="form.barcode" class="text-input" :placeholder="form.product_type === 'variant' ? '[set per variant]' : 'Optional'" :disabled="form.product_type === 'variant'">
+                      <label class="form-label">Barcode
+                        <span v-if="errors.barcode" class="label-required">{{ errors.barcode }}</span>
+                      </label>
+                      <div class="barcode-field">
+                        <input v-model="form.barcode" class="text-input barcode-input" :class="{ 'input-error': errors.barcode }" :placeholder="form.product_type === 'variant' ? '[set per variant]' : 'Scan or type…'" :disabled="form.product_type === 'variant'" @keydown.enter.prevent @input="errors.barcode = ''">
+                        <button v-if="form.product_type !== 'variant'" type="button" class="scan-inside" title="Scan barcode (camera)" @click="openScanner(c => { form.barcode = c; errors.barcode = '' })"><UIcon name="i-lucide-scan-barcode" /></button>
+                      </div>
                     </div>
 
                     <div class="c6">
@@ -1314,6 +1358,7 @@
                 <div class="pcard-title vlist-title">Variant List <span class="section-note">{{ variantRows.length }} variant{{ variantRows.length === 1 ? '' : 's' }}</span></div>
                 <span class="field-hint">Isi SKU tiap varian. Kolom "same for all" terkunci (nilai dari form); yang tidak, isi per baris.</span>
               </div>
+              <div v-if="dupBarcodes.size" class="var-barcode-warn"><UIcon name="i-lucide-triangle-alert" /> Duplicate barcode — each variant must have a unique barcode (highlighted rows).</div>
               <div v-if="!variantRows.length" class="var-empty">Tambahkan minimal satu nilai ke <strong>Variant Values 1</strong> untuk membuat baris varian.</div>
               <div v-else class="var-table-wrap">
                 <table class="var-table">
@@ -1345,7 +1390,11 @@
                         <input v-if="row.sku_auto && !row.id" class="cell-input" value="(auto)" disabled>
                         <input v-else v-model="row.sku" class="cell-input" :class="{ 'input-error': !row.id && !row.sku.trim() }" :disabled="!!row.id" placeholder="SKU">
                       </td>
-                      <td class="vt-barcode"><input v-model="row.barcode" class="cell-input" placeholder="Barcode"></td>
+                      <td class="vt-barcode">
+                        <div class="cell-scan">
+                          <input v-model="row.barcode" class="cell-input barcode-cell-input" :class="{ 'input-error': row.barcode && dupBarcodes.has(row.barcode) }" placeholder="Barcode" @keydown.enter.prevent @input="clearBarcodeDup"><button type="button" class="scan-inside-sm" title="Scan barcode (camera)" @click="openScanner(c => { row.barcode = c; clearBarcodeDup() })"><UIcon name="i-lucide-scan-barcode" /></button>
+                        </div>
+                      </td>
                       <td class="vt-price"><input :value="applyToAll.def_selling_price ? priceDisplayMin0(form.def_selling_price) : priceDisplay(row.def_selling_price)" class="cell-input" inputmode="numeric" placeholder="Rp 0" :disabled="applyToAll.def_selling_price" @input="onVarPriceInput($event, i, 'def_selling_price')"></td>
                       <td class="vt-price"><input :value="applyToAll.def_purchase_price ? priceDisplayMin0(form.def_purchase_price) : priceDisplay(row.def_purchase_price)" class="cell-input" inputmode="numeric" placeholder="Rp 0" :disabled="applyToAll.def_purchase_price" @input="onVarPriceInput($event, i, 'def_purchase_price')"></td>
                       <td class="vt-weight"><input :value="applyToAll.weight_gr ? formatDecimalComma(Number(form.weight_gr)) : vNumVal(i, 'weight_gr')" type="text" inputmode="decimal" class="cell-input" :disabled="applyToAll.weight_gr" placeholder="0" @input="onVarNumInput($event, i, 'weight_gr')" @blur="onVarNumBlur(i, 'weight_gr')"></td>
@@ -1469,6 +1518,8 @@
         <TablePager :page="currentPage" :total="total" :page-size="pageSize" readonly />
       </div>
     </div>
+
+    <AppBarcodeScanner v-model="scanOpen" :confirm="scanConfirm" @detected="onScanDetected" />
   </div>
 </template>
 
@@ -1600,6 +1651,12 @@
   .chip-x:hover { background: rgba(0, 0, 0, 0.1); }
   .chip-field { flex: 1 1 90px; min-width: 90px; border: none; outline: none; background: transparent; font-size: 14px; color: var(--text-primary); font-family: var(--font-family); }
   .var-empty { padding: 24px; text-align: center; color: var(--text-muted); font-size: 14px; }
+  .var-barcode-warn {
+    display: flex; align-items: center; gap: 7px;
+    margin-bottom: 10px; padding: 9px 12px; border-radius: 8px;
+    background: var(--danger-light); color: var(--danger);
+    font-size: 13px; font-weight: 600;
+  }
   .var-table-wrap { overflow-x: auto; }
   .var-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   .var-table th, .var-table td { padding: 7px 8px; border-bottom: 1px solid var(--border-color); text-align: left; vertical-align: middle; }
@@ -1829,4 +1886,35 @@
   .type-badge.variant { background: var(--accent-light); color: var(--accent); }
   .prod-country { font-size: 12px; color: var(--text-muted); font-weight: 600; }
   .unit-suffix { color: var(--text-muted); font-size: 12px; font-weight: 400; }
+
+  /* ── Barcode scan buttons (ikon di DALAM field/searchbox) ── */
+  /* Ikon di dalam searchbox (slot trailing SearchSort) */
+  .ss-scan {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; flex-shrink: 0; border-radius: 6px;
+    border: none; background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 17px;
+  }
+  .ss-scan:hover { background: var(--bg-hover); color: var(--accent); }
+
+  /* Ikon di dalam field barcode (single) */
+  .barcode-field { position: relative; }
+  .barcode-input { padding-right: 42px; }
+  .scan-inside {
+    position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 7px;
+    border: none; background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 18px;
+  }
+  .scan-inside:hover { background: var(--bg-hover); color: var(--accent); }
+
+  /* Ikon di dalam cell barcode (variant) */
+  .cell-scan { position: relative; display: block; }
+  .var-table .vt-barcode .barcode-cell-input { padding-right: 28px; }
+  .scan-inside-sm {
+    position: absolute; top: 50%; right: 3px; transform: translateY(-50%);
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 5px;
+    border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 14px;
+  }
+  .scan-inside-sm:hover { background: var(--bg-hover); color: var(--accent); }
 </style>

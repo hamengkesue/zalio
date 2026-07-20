@@ -26,6 +26,7 @@
       <button v-if="search" type="button" class="ss-clear" title="Clear search" @click="search = ''">
         <UIcon name="i-lucide-x" />
       </button>
+      <slot name="trailing" />
     </div>
 
     <template v-if="sortOptions?.length">

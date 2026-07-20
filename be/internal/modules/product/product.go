@@ -279,7 +279,7 @@ func (r *ProductRepo) ListPaged(ctx context.Context, limit, offset int, f Produc
 	if f.Search != "" {
 		args = append(args, f.Search)
 		p := len(args)
-		conds = append(conds, fmt.Sprintf("(p.product_name ILIKE '%%'||$%d||'%%' OR v.sku ILIKE '%%'||$%d||'%%')", p, p))
+		conds = append(conds, fmt.Sprintf("(p.product_name ILIKE '%%'||$%d||'%%' OR v.sku ILIKE '%%'||$%d||'%%' OR v.barcode ILIKE '%%'||$%d||'%%')", p, p, p))
 	}
 	if f.ProductType != "" {
 		args = append(args, f.ProductType)
@@ -600,10 +600,17 @@ func productSaveError(c *gin.Context, err error) {
 		case "23505": // unique violation (sku/barcode)
 			field := "sku"
 			msg := "SKU already exists"
+			value := ""
 			if pgErr.ConstraintName == "uq_variant_barcode" {
 				field, msg = "barcode", "Barcode already exists"
+				// pgErr.Detail: "Key (barcode)=(<value>) already exists."
+				if i := strings.Index(pgErr.Detail, "=("); i >= 0 {
+					if j := strings.Index(pgErr.Detail[i+2:], ")"); j >= 0 {
+						value = pgErr.Detail[i+2 : i+2+j]
+					}
+				}
 			}
-			c.JSON(http.StatusConflict, gin.H{"error": msg, "field": field})
+			c.JSON(http.StatusConflict, gin.H{"error": msg, "field": field, "value": value})
 			return
 		case "23503", "22P02": // FK / uuid tidak valid
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid reference (brand/subcategory/uom)"})
