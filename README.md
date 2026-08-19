@@ -1,3 +1,6 @@
+# zalio
+Project_MasRizki
+
 # Zalio ERP
 
 ERP back-office + (nanti) storefront ecommerce untuk bisnis retail/commerce & fulfillment.
