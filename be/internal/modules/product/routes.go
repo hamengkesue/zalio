@@ -49,4 +49,9 @@ func Register(protected *gin.RouterGroup, pool *pgxpool.Pool) {
 	admin.PUT("/products/:id", prod.Update)
 	admin.PATCH("/products/:id/toggle-active", prod.ToggleActive)
 	admin.PATCH("/product-variants/:id/toggle-active", prod.ToggleVariantActive)
+	admin.GET("/product-import/template", prod.ImportTemplate)
+	admin.GET("/product-import/existing", prod.ImportExisting)
+	admin.POST("/product-import/validate", prod.ImportValidate)
+	admin.POST("/product-import/commit", prod.ImportCommit)
+	admin.POST("/product-import/failed", prod.ImportFailed)
 }

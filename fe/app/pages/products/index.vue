@@ -142,6 +142,7 @@
 
   // ── form ──
   const showForm = ref(false)
+  const showImport = ref(false)
   const editingId = ref<string | null>(null)
   const saving = ref(false)
   const emptyForm = () => ({
@@ -216,7 +217,8 @@
 
   function blankVariant(v1: string, v2: string): VariantRow {
     return {
-      id: '', variant_value_1: v1, variant_value_2: v2, sku: '', sku_auto: skuMode.value === 'auto', barcode: '',
+      // Varian BARU selalu SKU otomatis (tak tergantung skuMode yang dipakai produk single).
+      id: '', variant_value_1: v1, variant_value_2: v2, sku: '', sku_auto: true, barcode: '',
       // Harga/berat per-baris hanya dipakai saat checkbox di-uncheck → mulai 0.
       def_selling_price: 0, def_purchase_price: 0, cogs_unit: 0,
       // Dimensi selalu ikut form (tak ada kolom di tabel Variant List).
@@ -248,6 +250,8 @@
     const val = inp.value.trim()
     if (val && !arr.some(x => x.toLowerCase() === val.toLowerCase())) arr.push(val)
     inp.value = ''
+    if (axis === 1) errors.variant_values_1 = ''
+    else errors.variant_values_2 = ''
   }
   function removeAxisValue(axis: 1 | 2, i: number) {
     const arr = axis === 1 ? variantAxes.values1 : variantAxes.values2
@@ -866,6 +870,8 @@
     // Field khusus variant.
     errors.variant_name_1 = isVariant ? (form.variant_name_1.trim() ? '' : 'required') : ''
     errors.variant_values_1 = isVariant ? (variantAxes.values1.filter(Boolean).length ? '' : 'required') : ''
+    // Variant Name 2 diisi → Variant Values 2 wajib ada minimal satu.
+    errors.variant_values_2 = isVariant && form.variant_name_2.trim() ? (variantAxes.values2.filter(Boolean).length ? '' : 'required') : ''
     // Chart of Accounts — ke-8 akun wajib diisi.
     let coaOk = true
     for (const f of COA_FIELDS) {
@@ -891,10 +897,12 @@
     const sharedOk =!errors.product_name && !errors.brand_id && !errors.category_id && !errors.subcategory_id && !errors.uom_1 && !errors.selling_uom && !errors.stocking_uom && !ratio2Err.value && !ratio3Err.value && !errors.description && coaOk
     if (isVariant) {
       const rowsOk = variantListValid.value
-      if (!rowsOk && sharedOk && !errors.variant_name_1 && !errors.variant_values_1) {
+      if (errors.variant_values_2 && sharedOk && !errors.variant_name_1 && !errors.variant_values_1) {
+        toast.add({ title: 'Variant Values 2 required', description: `Add at least one value for "${form.variant_name_2.trim()}", or clear Variant Name 2.`, color: 'error' })
+      } else if (!rowsOk && sharedOk && !errors.variant_name_1 && !errors.variant_values_1 && !errors.variant_values_2) {
         toast.add({ title: 'Check variants', description: 'Every variant row needs a SKU' + (applyToAll.weight_gr ? ' and a weight greater than 0' : '') + '.', color: 'error' })
       }
-      return sharedOk && !errors.variant_name_1 && !errors.variant_values_1 && rowsOk && barcodeOk
+      return sharedOk && !errors.variant_name_1 && !errors.variant_values_1 && !errors.variant_values_2 && rowsOk && barcodeOk
     }
     return sharedOk && !errors.sku && !errors.weight_gr
   }
@@ -978,8 +986,14 @@
   <div class="page">
     <div class="page-body">
       <div class="page-header">
-        <h1 class="page-title">Products</h1>
-        <p class="breadcrumbs"><span>Product Management</span> <span class="crumb-sep">›</span> <span>Products</span></p>
+        <div>
+          <h1 class="page-title">Products</h1>
+          <p class="breadcrumbs"><span>Product Management</span> <span class="crumb-sep">›</span> <span>Products</span></p>
+        </div>
+        <div class="page-actions">
+          <button class="btn-outline" @click="showImport = true"><UIcon name="i-lucide-upload" /> Import</button>
+          <button class="btn-outline" disabled title="Coming soon"><UIcon name="i-lucide-download" /> Export</button>
+        </div>
       </div>
 
       <div class="toolbar">
@@ -1343,8 +1357,9 @@
                       <label class="form-label">Variant Name 2 <span class="section-note">optional</span></label>
                     </div>
                     <input v-model="form.variant_name_2" class="text-input" :disabled="nameLocked(2)" placeholder="e.g. Size (leave empty for 1 axis)">
-                    <label class="form-label var-vals-lbl">Variant Values 2 <span v-if="form.variant_name_2.trim()" class="req">*</span></label>
-                    <div class="chip-input" :class="{ disabled: !form.variant_name_2.trim() }">
+                    <label class="form-label var-vals-lbl">Variant Values 2 <span v-if="form.variant_name_2.trim()" class="req">*</span>
+                      <span v-if="errors.variant_values_2 === 'required'" class="label-required">Required</span></label>
+                    <div class="chip-input" :class="{ disabled: !form.variant_name_2.trim(), 'input-error': errors.variant_values_2 }">
                       <span v-for="(val, i) in variantAxes.values2" :key="`v2-${i}`" class="chip" :class="{ locked: isLockedValue(2, val) }">{{ val }}<button v-if="!isLockedValue(2, val)" type="button" class="chip-x" @click="removeAxisValue(2, i)"><UIcon name="i-lucide-x" /></button></span>
                       <input v-model="axisInput2" class="chip-field" :disabled="!form.variant_name_2.trim()" :placeholder="variantAxes.values2.length ? 'Add more…' : 'Type a value, press Enter'" @keydown.enter.prevent="addAxisValue(2)">
                     </div>
@@ -1520,11 +1535,22 @@
     </div>
 
     <AppBarcodeScanner v-model="scanOpen" :confirm="scanConfirm" @detected="onScanDetected" />
+    <ProductImportModal v-model="showImport" @imported="reload" />
   </div>
 </template>
 
 <style scoped>
-  .page-header { padding-bottom: 16px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
+  .page-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .btn-outline {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 38px; padding: 0 14px; border-radius: 10px;
+    border: 1px solid var(--border-color); background: var(--bg-surface);
+    color: var(--text-secondary); font-size: 14px; font-weight: 700; cursor: pointer;
+    transition: border-color 0.12s, color 0.12s;
+  }
+  .btn-outline:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .btn-outline:disabled { opacity: 0.5; cursor: not-allowed; }
   .breadcrumbs { margin-top: 6px; font-size: 13px; color: var(--text-muted); }
 
   .pform { display: flex; flex-direction: column; }
